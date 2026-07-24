@@ -1,5 +1,6 @@
 // Babel Design Tokens — GENERATED from tokens.json. Do not edit.
-// Brand: black core + bronze accent (#B08D57). Consumed by mobile (base_mobile_library).
+// Brand: black core + bronze accent (#B08D57). Consumed by mobile via the
+// babel_design_tokens pub package (import 'package:babel_design_tokens/babel_tokens.dart').
 import 'dart:ui';
 
 /// Color ramps (theme-invariant).

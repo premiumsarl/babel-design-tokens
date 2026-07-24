@@ -1,0 +1,18 @@
+name: babel_design_tokens
+description: >-
+  Generated Babel design tokens (colors, spacing, radius, type) for Flutter —
+  single source of truth: black core + bronze accent (#B08D57). The Dart code in
+  lib/ is generated from ../tokens.json by ../build.mjs; do not hand-edit it.
+version: 0.2.0
+
+# Private: consumed by the mobile app as a git dependency, never published to
+# pub.dev. `pub` still resolves it from a git url + ref (see README.md).
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter

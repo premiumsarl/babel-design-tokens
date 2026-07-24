@@ -2,10 +2,11 @@
 /**
  * Babel design-token generator.
  *
- * Reads tokens.json (the single source of truth) and emits, into dist/:
- *   - tokens.css        CSS custom properties  → admin panel + website
- *   - babel_tokens.dart Dart constants          → mobile (base_mobile_library)
- *   - tokens.flat.json  resolved flat map       → tooling / the CI ratchet
+ * Reads tokens.json (the single source of truth) and emits:
+ *   - dist/tokens.css            theme-adaptive CSS custom properties → admin panel
+ *   - dist/tokens.values.css     flat (no-@media) CSS values          → website
+ *   - dist/tokens.flat.json      resolved flat map                    → tooling / CI ratchet
+ *   - dart/lib/babel_tokens.dart Dart constants (a pub package)       → mobile
  *
  * No external dependencies: alias resolution ({color.brand.500}) is done here,
  * so the pipeline runs anywhere Node runs. Never hand-edit dist/ — regenerate.
@@ -129,6 +130,23 @@ ${semanticCss('dark')}
 }
 `;
 
+/* ---------- CSS (values only, single theme) ----------
+   A flat :root with the ramp + scales + LIGHT semantic values and NO
+   @media / [data-theme] theme-switching. For single-theme consumers (the
+   website) that pull token VALUES and drive their own theming: importing the
+   theme-adaptive tokens.css above would let its dark rules override the
+   consumer's own accent. */
+const valuesCss = `/* Babel Design Tokens (values only) — GENERATED from tokens.json. Do not edit. */
+/* Flat single-theme values (ramp + type + space + radius + z + light semantics),
+   no @media / [data-theme] rules. For consumers that theme themselves (website). */
+:root {
+${cssBlock()}
+
+  /* semantic values (light) — plain, no theme switching */
+${semanticCss('light')}
+}
+`;
+
 /* ---------- Dart ---------- */
 function dartColors() {
   const L = [];
@@ -156,7 +174,8 @@ function dartSemantic(theme) {
   return L.join('\n');
 }
 const dart = `// Babel Design Tokens — GENERATED from tokens.json. Do not edit.
-// Brand: black core + bronze accent (#B08D57). Consumed by mobile (base_mobile_library).
+// Brand: black core + bronze accent (#B08D57). Consumed by mobile via the
+// babel_design_tokens pub package (import 'package:babel_design_tokens/babel_tokens.dart').
 import 'dart:ui';
 
 ${dartColors()}
@@ -184,13 +203,17 @@ ${Object.entries(tokens.font.size).map(([k, v]) => `  static const double size${
 `;
 
 /* ---------- write ---------- */
+const DART_LIB = join(ROOT, 'dart', 'lib');
 mkdirSync(DIST, { recursive: true });
+mkdirSync(DART_LIB, { recursive: true });
 writeFileSync(join(DIST, 'tokens.css'), css);
-writeFileSync(join(DIST, 'babel_tokens.dart'), dart);
+writeFileSync(join(DIST, 'tokens.values.css'), valuesCss);
 writeFileSync(join(DIST, 'tokens.flat.json'), JSON.stringify(flat, null, 2) + '\n');
+writeFileSync(join(DART_LIB, 'babel_tokens.dart'), dart);
 
 const nColors = Object.values(tokens.color).reduce((n, r) => n + Object.keys(r).length, 0);
 console.log(
-  `✓ built dist/  (${nColors} color steps, ${Object.keys(tokens.semantic).length} semantic roles, ` +
-  `${Object.keys(flat).length} flat tokens)\n  → tokens.css  babel_tokens.dart  tokens.flat.json`,
+  `✓ built  (${nColors} color steps, ${Object.keys(tokens.semantic).length} semantic roles, ` +
+  `${Object.keys(flat).length} flat tokens)\n` +
+  `  → dist/tokens.css  dist/tokens.values.css  dist/tokens.flat.json  dart/lib/babel_tokens.dart`,
 );

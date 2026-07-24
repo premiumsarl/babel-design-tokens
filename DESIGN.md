@@ -96,13 +96,13 @@ This is the **only** scale. It retires mobile's `5/10/15/20` (UIConstants) and `
 
 ## 6 · Consuming the tokens
 
-The pipeline: **`tokens.json` → `build.mjs` → `dist/{tokens.css, babel_tokens.dart, tokens.flat.json}`**.
+The pipeline: **`tokens.json` → `build.mjs` →** `dist/{tokens.css, tokens.values.css, tokens.flat.json}` (web, via npm) **and** `dart/lib/babel_tokens.dart` (Flutter, via the `dart/` pub package). One source, delivered through each ecosystem's own package manager — see [README.md](./README.md) for install snippets.
 
-**Admin panel (Next.js / vanilla CSS).** Import `dist/tokens.css` at the top of `globals.css`; point the existing 59‑entry compatibility‑alias block at these tokens (`--color-primary: var(--color-accent-strong)` etc.); delete the `var(--color-primary, #6366f1)` fallbacks. Its `check-changed.mjs` ratchet already enforces "no undefined token" — this just gives it a real vocabulary to check against.
+**Admin panel (Next.js / vanilla CSS).** Import the theme-adaptive `tokens.css` at the top of `globals.css`; point the existing compatibility‑alias block at these tokens (`--color-primary: var(--color-accent-strong)` etc.); delete the `var(--color-primary, #6366f1)` fallbacks. Its `check-changed.mjs` ratchet already enforces "no undefined token" — this just gives it a real vocabulary to check against.
 
-**Website (Vite / vanilla CSS).** Import `dist/tokens.css`; migrate `src/css/variables.css` to *reference* these tokens instead of redefining bronze; retire the slate palette (adopt the neutral ramp) and the standalone stylesheets (`blog.css`, `admin-login.css`, …) that consume zero tokens today.
+**Website (vanilla CSS, single-theme).** Import `tokens.values.css` (the flat, no-`@media` build) — *not* `tokens.css`, whose `[data-theme]`/`@media` dark rules would override a single-theme site's own accent. Migrate `src/css/variables.css` to *reference* these values instead of redefining bronze; retire the slate palette (adopt the neutral ramp) and the standalone stylesheets (`blog.css`, `admin-login.css`, …) that consume zero tokens today.
 
-**Mobile (Flutter).** Vendor `dist/babel_tokens.dart` into `base_mobile_library` (the existing shared host). Map `ColorScheme` / `AppTheme` to `BabelColorsLight` / `BabelColorsDark`, `AppTypography` sizes to `BabelType`, and `SizedBoxUtil` to `BabelSpace`. Fold `babel_theme.dart` financial/realtor colors into semantic roles.
+**Mobile (Flutter).** Depend on the `babel_design_tokens` pub package (the [`dart/`](./dart) folder) as a git dependency; ideally re-export it from `base_mobile_library` (the existing shared host). Map `ColorScheme` / `AppTheme` to `BabelColorsLight` / `BabelColorsDark`, `AppTypography` sizes to `BabelType`, and `SizedBoxUtil` to `BabelSpace`. Fold `babel_theme.dart` financial/realtor colors into semantic roles.
 
 Same token names, three renderings — so a change to `tokens.json` reaches all three the same way.
 
