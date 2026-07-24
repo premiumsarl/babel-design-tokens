@@ -1,0 +1,24 @@
+{
+  "name": "@premiumsarl/babel-design-tokens",
+  "version": "0.1.0",
+  "description": "Single source of truth for Babel's design tokens — black core + bronze accent. Generates CSS custom properties (admin + website) and Dart constants (mobile).",
+  "type": "module",
+  "files": [
+    "tokens.json",
+    "dist/"
+  ],
+  "exports": {
+    "./tokens.css": "./dist/tokens.css",
+    "./tokens.json": "./dist/tokens.flat.json",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node scripts/check-tokens.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "verify": "node build.mjs && node scripts/check-contrast.mjs",
+    "prepublishOnly": "node build.mjs && node scripts/check-contrast.mjs"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
