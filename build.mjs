@@ -172,7 +172,7 @@ ${Object.entries(tokens.space).map(([k, v]) => `  static const double s${dartNam
 
 /// Corner radii (logical px).
 abstract final class BabelRadius {
-${Object.entries(tokens.radius).map(([k, v]) => `  static const double ${dartName(k)} = ${Number(v).toFixed(1)};`).join('\n')}
+${Object.entries(tokens.radius).map(([k, v]) => `  static const double ${dartName(k).replace(/^_/, 'r')} = ${Number(v).toFixed(1)};`).join('\n')}
 }
 
 /// Type scale (logical px) + families.

@@ -142,7 +142,7 @@ abstract final class BabelRadius {
   static const double md = 9.0;
   static const double lg = 12.0;
   static const double xl = 16.0;
-  static const double _2xl = 22.0;
+  static const double r2xl = 22.0;
   static const double full = 9999.0;
 }
 
