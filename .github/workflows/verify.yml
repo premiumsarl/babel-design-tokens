@@ -1,0 +1,61 @@
+# Tokens integrity gate.
+#
+# dist/ and dart/lib/ are COMMITTED but GENERATED from tokens.json, and
+# consumers install them straight from git (npm git-dep / pub git-dep) —
+# there is no publish step where a check could run (`prepublishOnly` never
+# fires for git installs). So this workflow is the only enforcement point:
+#
+#   1. regenerate from tokens.json and fail if the committed output drifted
+#   2. run the WCAG contrast gate on the (now provably fresh) output
+#   3. assert npm/pub version parity (package.json == dart/pubspec.yaml)
+#
+# Runs on PRs, on main, and on v* tags so a release ref is validated exactly
+# as consumers will install it.
+name: verify
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Zero dependencies — build straight from the checkout.
+      - name: Build from tokens.json
+        run: node build.mjs
+
+      - name: Committed generated output matches tokens.json (no drift)
+        run: |
+          if [ -n "$(git status --porcelain dist dart/lib)" ]; then
+            echo "::error::dist/ or dart/lib is out of sync with tokens.json — run 'npm run build' and commit the result."
+            git status --short dist dart/lib
+            git diff dist dart/lib | head -100
+            exit 1
+          fi
+          echo "generated output is in sync"
+
+      - name: WCAG contrast gate
+        run: node scripts/check-contrast.mjs
+
+      - name: Version parity (package.json == dart/pubspec.yaml)
+        run: |
+          node -e '
+            const { readFileSync } = require("node:fs");
+            const pkg = JSON.parse(readFileSync("package.json", "utf8")).version;
+            const m = readFileSync("dart/pubspec.yaml", "utf8").match(/^version:\s*(\S+)/m);
+            const pub = m && m[1];
+            if (pkg !== pub) {
+              console.error(`version mismatch: package.json ${pkg} != dart/pubspec.yaml ${pub}`);
+              process.exit(1);
+            }
+            console.log(`version parity OK: ${pkg}`);
+          '
