@@ -56,9 +56,44 @@ const walkFlat = (obj, prefix) => {
     }
   }
 };
-['color', 'semantic', 'font', 'space', 'radius', 'shadow', 'z'].forEach(
+['color', 'semantic', 'font', 'space', 'spaceRole', 'radius', 'shadow', 'z',
+ 'breakpoint'].forEach(
   (g) => walkFlat(tokens[g], g),
 );
+
+/* ---------- spacing emit helpers ---------- */
+
+/**
+ * A space rung as a CSS length.
+ *
+ * rem, not px, so spacing scales with the reader's root font size. Both web
+ * consumers currently pin `html { font-size: 16px }`, which makes this change
+ * a provable no-op today AND the thing that makes removing those pins an
+ * improvement rather than a regression.
+ *
+ * The `px` rung is the exception and stays absolute: it is a HAIRLINE, used to
+ * nudge something by the width of a border. Scaled to 1.3px it is not more
+ * accessible, just blurry.
+ */
+const spaceLength = (key, v) =>
+  key === 'px' ? '1px' : v === 0 ? '0' : `${+(v / 16).toFixed(6)}rem`;
+
+const cssVarName = (key) => `--space-${String(key).replace('_', '-')}`;
+
+/**
+ * Emit-as-reference. `resolve()` flattens {space.6} to the number 24, which is
+ * right for a colour alias and wrong for a role: a role's whole job is to name
+ * WHICH rung a job uses, so it has to survive into the stylesheet as
+ * `var(--space-6)`. Handles multi-value roles ("{space.3} {space.4}") and
+ * literal values (40 -> 40px, "60ch" -> 60ch).
+ */
+const roleValue = (v) => {
+  if (typeof v === 'number') return `${v}px`;
+  return String(v).replace(
+    /\{space\.([^}]+)\}/g,
+    (_, k) => `var(${cssVarName(k)})`,
+  );
+};
 
 /* ---------- CSS ---------- */
 function cssBlock(indent = '  ') {
@@ -85,14 +120,44 @@ function cssBlock(indent = '  ') {
     L.push(`${indent}--leading-${k}: ${v};`);
   for (const [k, v] of Object.entries(tokens.font.tracking))
     L.push(`${indent}--tracking-${k}: ${v};`);
-  // space / radius / z
+  // space — the ladder: which numbers are legal
   for (const [k, v] of Object.entries(tokens.space))
-    L.push(`${indent}--space-${k.replace('_', '-')}: ${v}px;`);
+    L.push(`${indent}${cssVarName(k)}: ${spaceLength(k, v)};`);
+  // spaceRole — which number a given job uses. Emitted as references to the
+  // ladder above (see roleValue), so the alias chain survives into DevTools.
+  for (const [k, v] of Object.entries(tokens.spaceRole)) {
+    // pad-page is responsive; its base value goes here, the steps below.
+    const val = v && typeof v === 'object' ? v.base : v;
+    L.push(`${indent}--${k}: ${roleValue(val)};`);
+  }
   for (const [k, v] of Object.entries(tokens.radius))
     L.push(`${indent}--radius-${k}: ${v === 9999 ? '9999px' : v + 'px'};`);
   for (const [k, v] of Object.entries(tokens.z))
     L.push(`${indent}--z-${k}: ${v};`);
   return L.join('\n');
+}
+
+/**
+ * Media-query steps for any role declared as { base, <breakpoint>… }.
+ *
+ * Only --pad-page uses this today: the page's outer padding was a flat 24px at
+ * every viewport in admin, which is too tight on a phone and too mean on a
+ * 27-inch monitor. Breakpoint keys must exist in tokens.breakpoint.
+ */
+function responsiveRoleCss() {
+  const blocks = [];
+  for (const [role, v] of Object.entries(tokens.spaceRole)) {
+    if (!v || typeof v !== 'object') continue;
+    for (const [bp, val] of Object.entries(v)) {
+      if (bp === 'base') continue;
+      const min = tokens.breakpoint[bp];
+      if (min === undefined) throw new Error(`Unknown breakpoint {${bp}} on spaceRole.${role}`);
+      blocks.push(
+        `@media (min-width: ${min}px) {\n  :root { --${role}: ${roleValue(val)}; }\n}`,
+      );
+    }
+  }
+  return blocks.join('\n\n');
 }
 
 function semanticCss(theme, indent = '  ') {
@@ -128,6 +193,9 @@ ${semanticCss('light')}
 :root[data-theme="dark"] {
 ${semanticCss('dark')}
 }
+
+/* Responsive spacing roles — see responsiveRoleCss in build.mjs. */
+${responsiveRoleCss()}
 `;
 
 /* ---------- CSS (values only, single theme) ----------
@@ -145,6 +213,10 @@ ${cssBlock()}
   /* semantic values (light) — plain, no theme switching */
 ${semanticCss('light')}
 }
+
+/* Responsive spacing roles — see responsiveRoleCss in build.mjs. These are
+   viewport rules, not theme rules, so they belong in the values build too. */
+${responsiveRoleCss()}
 `;
 
 /* ---------- Dart ---------- */
@@ -173,10 +245,49 @@ function dartSemantic(theme) {
   L.push('}');
   return L.join('\n');
 }
+/* Layout helpers, generated from the same ladder as the CSS.
+   `BabelSpace.s_4` is a number; the point of these is that a widget tree
+   should not have to build an EdgeInsets or a SizedBox by hand every time,
+   which is how 1,704 literal EdgeInsets accumulated in the mobile app. */
+const dartSpaceKeys = Object.keys(tokens.space);
+const gapName = (k) => (k === 'px' ? 'px' : String(k).replace('_', ''));
+
+function dartGaps() {
+  const L = [];
+  L.push('/// Fixed gaps between widgets, on the ladder. `BabelGap.h4` is a');
+  L.push('/// 16-logical-pixel vertical gap; `BabelGap.w2` an 8px horizontal one.');
+  L.push('abstract final class BabelGap {');
+  for (const k of dartSpaceKeys)
+    L.push(`  static const Widget h${gapName(k)} = SizedBox(height: BabelSpace.s${dartName(k)});`);
+  for (const k of dartSpaceKeys)
+    L.push(`  static const Widget w${gapName(k)} = SizedBox(width: BabelSpace.s${dartName(k)});`);
+  L.push('}');
+  return L.join('\n');
+}
+
+function dartInsets() {
+  const L = [];
+  L.push('/// EdgeInsets on the ladder. `a` = all, `h` = horizontal, `v` = vertical.');
+  L.push('abstract final class BabelInsets {');
+  for (const k of dartSpaceKeys)
+    L.push(`  static const EdgeInsets a${gapName(k)} = EdgeInsets.all(BabelSpace.s${dartName(k)});`);
+  for (const k of dartSpaceKeys)
+    L.push(`  static const EdgeInsets h${gapName(k)} = EdgeInsets.symmetric(horizontal: BabelSpace.s${dartName(k)});`);
+  for (const k of dartSpaceKeys)
+    L.push(`  static const EdgeInsets v${gapName(k)} = EdgeInsets.symmetric(vertical: BabelSpace.s${dartName(k)});`);
+  // The card/screen padding role, so a screen does not have to remember 16.
+  L.push(`  static const EdgeInsets card = EdgeInsets.all(BabelSpace.s${dartName('4')});`);
+  L.push('}');
+  return L.join('\n');
+}
+
 const dart = `// Babel Design Tokens — GENERATED from tokens.json. Do not edit.
 // Brand: black core + bronze accent (#B08D57). Consumed by mobile via the
 // babel_design_tokens pub package (import 'package:babel_design_tokens/babel_tokens.dart').
-import 'dart:ui';
+//
+// Imports flutter/widgets (not just dart:ui) because BabelGap and BabelInsets
+// are Widget and EdgeInsets constants. The package already depends on Flutter.
+import 'package:flutter/widgets.dart';
 
 ${dartColors()}
 
@@ -187,6 +298,19 @@ ${dartSemantic('dark')}
 /// Spacing scale (logical px). One 4px-based ladder for the whole app.
 abstract final class BabelSpace {
 ${Object.entries(tokens.space).map(([k, v]) => `  static const double s${dartName(k)} = ${Number(v).toFixed(1)};`).join('\n')}
+}
+
+${dartGaps()}
+
+${dartInsets()}
+
+/// Control sizes. One height for every full-size form control, so labels and
+/// fields line up by construction instead of each caller nudging its own.
+abstract final class BabelSize {
+${Object.entries(tokens.spaceRole)
+  .filter(([k, v]) => typeof v === 'number')
+  .map(([k, v]) => `  static const double ${dartName(k)} = ${Number(v).toFixed(1)};`)
+  .join('\n')}
 }
 
 /// Corner radii (logical px).

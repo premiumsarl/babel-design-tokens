@@ -79,20 +79,32 @@
   --tracking-tight: -0.02em;
   --tracking-normal: 0;
   --tracking-wide: 0.08em;
-  --space-0: 0px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
-  --space-16: 64px;
-  --space-20: 80px;
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
   --space-px: 1px;
-  --space-0-5: 2px;
+  --space-0-5: 0.125rem;
+  --gap-page: var(--space-6);
+  --gap-section: var(--space-4);
+  --gap-inline: var(--space-2);
+  --pad-card: var(--space-6);
+  --pad-control: var(--space-2) var(--space-3);
+  --pad-cell: var(--space-3) var(--space-4);
+  --pad-pill: var(--space-0-5) var(--space-2);
+  --pad-page: var(--space-4);
+  --control-h: 40px;
+  --measure-prose: 60ch;
   --radius-sm: 6px;
   --radius-md: 9px;
   --radius-lg: 12px;
@@ -229,4 +241,13 @@
   --shadow-sm: 0 8px 20px -12px rgba(0,0,0,.60);
   --shadow-md: 0 16px 40px -16px rgba(0,0,0,.66), 0 2px 8px -2px rgba(0,0,0,.5);
   --shadow-lg: 0 26px 64px -22px rgba(0,0,0,.72), 0 2px 10px -2px rgba(0,0,0,.5);
+}
+
+/* Responsive spacing roles — see responsiveRoleCss in build.mjs. */
+@media (min-width: 768px) {
+  :root { --pad-page: var(--space-6); }
+}
+
+@media (min-width: 1440px) {
+  :root { --pad-page: var(--space-8); }
 }

@@ -1,7 +1,10 @@
 // Babel Design Tokens — GENERATED from tokens.json. Do not edit.
 // Brand: black core + bronze accent (#B08D57). Consumed by mobile via the
 // babel_design_tokens pub package (import 'package:babel_design_tokens/babel_tokens.dart').
-import 'dart:ui';
+//
+// Imports flutter/widgets (not just dart:ui) because BabelGap and BabelInsets
+// are Widget and EdgeInsets constants. The package already depends on Flutter.
+import 'package:flutter/widgets.dart';
 
 /// Color ramps (theme-invariant).
 abstract final class BabelColors {
@@ -133,8 +136,106 @@ abstract final class BabelSpace {
   static const double s_12 = 48.0;
   static const double s_16 = 64.0;
   static const double s_20 = 80.0;
+  static const double s_24 = 96.0;
+  static const double s_32 = 128.0;
   static const double spx = 1.0;
   static const double s_05 = 2.0;
+}
+
+/// Fixed gaps between widgets, on the ladder. `BabelGap.h4` is a
+/// 16-logical-pixel vertical gap; `BabelGap.w2` an 8px horizontal one.
+abstract final class BabelGap {
+  static const Widget h0 = SizedBox(height: BabelSpace.s_0);
+  static const Widget h1 = SizedBox(height: BabelSpace.s_1);
+  static const Widget h2 = SizedBox(height: BabelSpace.s_2);
+  static const Widget h3 = SizedBox(height: BabelSpace.s_3);
+  static const Widget h4 = SizedBox(height: BabelSpace.s_4);
+  static const Widget h5 = SizedBox(height: BabelSpace.s_5);
+  static const Widget h6 = SizedBox(height: BabelSpace.s_6);
+  static const Widget h8 = SizedBox(height: BabelSpace.s_8);
+  static const Widget h10 = SizedBox(height: BabelSpace.s_10);
+  static const Widget h12 = SizedBox(height: BabelSpace.s_12);
+  static const Widget h16 = SizedBox(height: BabelSpace.s_16);
+  static const Widget h20 = SizedBox(height: BabelSpace.s_20);
+  static const Widget h24 = SizedBox(height: BabelSpace.s_24);
+  static const Widget h32 = SizedBox(height: BabelSpace.s_32);
+  static const Widget hpx = SizedBox(height: BabelSpace.spx);
+  static const Widget h05 = SizedBox(height: BabelSpace.s_05);
+  static const Widget w0 = SizedBox(width: BabelSpace.s_0);
+  static const Widget w1 = SizedBox(width: BabelSpace.s_1);
+  static const Widget w2 = SizedBox(width: BabelSpace.s_2);
+  static const Widget w3 = SizedBox(width: BabelSpace.s_3);
+  static const Widget w4 = SizedBox(width: BabelSpace.s_4);
+  static const Widget w5 = SizedBox(width: BabelSpace.s_5);
+  static const Widget w6 = SizedBox(width: BabelSpace.s_6);
+  static const Widget w8 = SizedBox(width: BabelSpace.s_8);
+  static const Widget w10 = SizedBox(width: BabelSpace.s_10);
+  static const Widget w12 = SizedBox(width: BabelSpace.s_12);
+  static const Widget w16 = SizedBox(width: BabelSpace.s_16);
+  static const Widget w20 = SizedBox(width: BabelSpace.s_20);
+  static const Widget w24 = SizedBox(width: BabelSpace.s_24);
+  static const Widget w32 = SizedBox(width: BabelSpace.s_32);
+  static const Widget wpx = SizedBox(width: BabelSpace.spx);
+  static const Widget w05 = SizedBox(width: BabelSpace.s_05);
+}
+
+/// EdgeInsets on the ladder. `a` = all, `h` = horizontal, `v` = vertical.
+abstract final class BabelInsets {
+  static const EdgeInsets a0 = EdgeInsets.all(BabelSpace.s_0);
+  static const EdgeInsets a1 = EdgeInsets.all(BabelSpace.s_1);
+  static const EdgeInsets a2 = EdgeInsets.all(BabelSpace.s_2);
+  static const EdgeInsets a3 = EdgeInsets.all(BabelSpace.s_3);
+  static const EdgeInsets a4 = EdgeInsets.all(BabelSpace.s_4);
+  static const EdgeInsets a5 = EdgeInsets.all(BabelSpace.s_5);
+  static const EdgeInsets a6 = EdgeInsets.all(BabelSpace.s_6);
+  static const EdgeInsets a8 = EdgeInsets.all(BabelSpace.s_8);
+  static const EdgeInsets a10 = EdgeInsets.all(BabelSpace.s_10);
+  static const EdgeInsets a12 = EdgeInsets.all(BabelSpace.s_12);
+  static const EdgeInsets a16 = EdgeInsets.all(BabelSpace.s_16);
+  static const EdgeInsets a20 = EdgeInsets.all(BabelSpace.s_20);
+  static const EdgeInsets a24 = EdgeInsets.all(BabelSpace.s_24);
+  static const EdgeInsets a32 = EdgeInsets.all(BabelSpace.s_32);
+  static const EdgeInsets apx = EdgeInsets.all(BabelSpace.spx);
+  static const EdgeInsets a05 = EdgeInsets.all(BabelSpace.s_05);
+  static const EdgeInsets h0 = EdgeInsets.symmetric(horizontal: BabelSpace.s_0);
+  static const EdgeInsets h1 = EdgeInsets.symmetric(horizontal: BabelSpace.s_1);
+  static const EdgeInsets h2 = EdgeInsets.symmetric(horizontal: BabelSpace.s_2);
+  static const EdgeInsets h3 = EdgeInsets.symmetric(horizontal: BabelSpace.s_3);
+  static const EdgeInsets h4 = EdgeInsets.symmetric(horizontal: BabelSpace.s_4);
+  static const EdgeInsets h5 = EdgeInsets.symmetric(horizontal: BabelSpace.s_5);
+  static const EdgeInsets h6 = EdgeInsets.symmetric(horizontal: BabelSpace.s_6);
+  static const EdgeInsets h8 = EdgeInsets.symmetric(horizontal: BabelSpace.s_8);
+  static const EdgeInsets h10 = EdgeInsets.symmetric(horizontal: BabelSpace.s_10);
+  static const EdgeInsets h12 = EdgeInsets.symmetric(horizontal: BabelSpace.s_12);
+  static const EdgeInsets h16 = EdgeInsets.symmetric(horizontal: BabelSpace.s_16);
+  static const EdgeInsets h20 = EdgeInsets.symmetric(horizontal: BabelSpace.s_20);
+  static const EdgeInsets h24 = EdgeInsets.symmetric(horizontal: BabelSpace.s_24);
+  static const EdgeInsets h32 = EdgeInsets.symmetric(horizontal: BabelSpace.s_32);
+  static const EdgeInsets hpx = EdgeInsets.symmetric(horizontal: BabelSpace.spx);
+  static const EdgeInsets h05 = EdgeInsets.symmetric(horizontal: BabelSpace.s_05);
+  static const EdgeInsets v0 = EdgeInsets.symmetric(vertical: BabelSpace.s_0);
+  static const EdgeInsets v1 = EdgeInsets.symmetric(vertical: BabelSpace.s_1);
+  static const EdgeInsets v2 = EdgeInsets.symmetric(vertical: BabelSpace.s_2);
+  static const EdgeInsets v3 = EdgeInsets.symmetric(vertical: BabelSpace.s_3);
+  static const EdgeInsets v4 = EdgeInsets.symmetric(vertical: BabelSpace.s_4);
+  static const EdgeInsets v5 = EdgeInsets.symmetric(vertical: BabelSpace.s_5);
+  static const EdgeInsets v6 = EdgeInsets.symmetric(vertical: BabelSpace.s_6);
+  static const EdgeInsets v8 = EdgeInsets.symmetric(vertical: BabelSpace.s_8);
+  static const EdgeInsets v10 = EdgeInsets.symmetric(vertical: BabelSpace.s_10);
+  static const EdgeInsets v12 = EdgeInsets.symmetric(vertical: BabelSpace.s_12);
+  static const EdgeInsets v16 = EdgeInsets.symmetric(vertical: BabelSpace.s_16);
+  static const EdgeInsets v20 = EdgeInsets.symmetric(vertical: BabelSpace.s_20);
+  static const EdgeInsets v24 = EdgeInsets.symmetric(vertical: BabelSpace.s_24);
+  static const EdgeInsets v32 = EdgeInsets.symmetric(vertical: BabelSpace.s_32);
+  static const EdgeInsets vpx = EdgeInsets.symmetric(vertical: BabelSpace.spx);
+  static const EdgeInsets v05 = EdgeInsets.symmetric(vertical: BabelSpace.s_05);
+  static const EdgeInsets card = EdgeInsets.all(BabelSpace.s_4);
+}
+
+/// Control sizes. One height for every full-size form control, so labels and
+/// fields line up by construction instead of each caller nudging its own.
+abstract final class BabelSize {
+  static const double controlH = 40.0;
 }
 
 /// Corner radii (logical px).

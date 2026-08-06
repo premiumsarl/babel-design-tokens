@@ -1,6 +1,6 @@
 {
   "name": "@premiumsarl/babel-design-tokens",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Single source of truth for Babel's design tokens — black core + bronze accent. Generates CSS custom properties (admin + website) and Dart constants (mobile, via the /dart pub package).",
   "type": "module",
   "files": [
