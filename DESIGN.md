@@ -80,11 +80,49 @@ Scale (px): `xs 11 · sm 12 · base 14 · md 15 · lg 17 · xl 20 · 2xl 24 · 3
 
 ---
 
-## 4 · Spacing — one 4px ladder
+## 4 · Spacing — a ladder and a set of roles
 
-`0 · 1(px) · 2 · 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 64 · 80`
+### 4.1 The ladder — which numbers are legal
 
-This is the **only** scale. It retires mobile's `5/10/15/20` (UIConstants) and `kSpacing` ladders and the website's ad‑hoc px. Existing `4/8/16/24/32` usage (SizedBoxUtil, admin `--space-*`) already maps 1:1.
+`0 · 1(px) · 2 · 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 64 · 80 · 96 · 128`
+
+This is the **only** scale. `96` and `128` exist so the website's `--space-4xl` / `--space-5xl` (6rem / 8rem) have a rung to land on; without them the claim that this ladder covers the website was simply false.
+
+Web builds emit **rem** (`--space-4: 1rem`), Dart emits **logical pixels** (`BabelSpace.s_4 = 16.0`). The `px` rung stays absolute in CSS: it is a hairline used to nudge something by a border width, and a scaled 1.3px hairline is blurry, not accessible.
+
+### 4.2 The roles — which number a given job uses
+
+The ladder alone did not produce consistency. Admin shipped four page roots with four vertical rhythms — 24 / 20 / 16 / 1.25rem — and **three of the four were already tokenised**, so a value-level lint passed all four. A scale can only say a number is legal; it cannot say it is the right one for this job.
+
+| Role | Value | What it governs |
+|---|---|---|
+| `--gap-page` | `{space.6}` 24 | between blocks at page level |
+| `--gap-section` | `{space.4}` 16 | between blocks inside a page section |
+| `--gap-inline` | `{space.2}` 8 | between controls sitting side by side |
+| `--pad-page` | 16 / 24 / 32 | the page's outer padding, responsive |
+| `--pad-card` | `{space.6}` 24 | a card's own padding |
+| `--pad-cell` | `{space.3} {space.4}` | table cell padding |
+| `--pad-control` | `{space.2} {space.3}` | a form control's padding |
+| `--pad-pill` | `{space.0_5} {space.2}` | badges and chips |
+| `--control-h` | `40px` | every full-size form control |
+| `--measure-prose` | `60ch` | the cap on a line of running text |
+
+Roles are emitted **as references** — `--gap-page: var(--space-6)`, never a flattened `24px`. Flattening severs the chain: DevTools would show a number with no hint of which role produced it, and a ladder change would stop propagating.
+
+Dart gets the same roles as `BabelSize.controlH`, plus `BabelGap` (`h4`, `w2`, …) and `BabelInsets` (`a4`, `h6`, `v2`, …) so a widget tree never has to hand-build a `SizedBox` or `EdgeInsets`.
+
+### 4.3 The four rhythm rules
+
+1. **Rhythm is produced by the nearest container's `gap`.** An element never sets `margin-bottom` to create rhythm.
+2. **Two levels only:** page (`--gap-page`) and section (`--gap-section`).
+3. **A component declares its role token, never a primitive.** `padding: var(--space-6)` on a card is a violation *even though the number is right*.
+4. **New page roots must register** in the consumer's role registry, or CI fails.
+
+### 4.4 What this actually retires
+
+- **Admin**: its private rem fork of `--space-*`, and four disagreeing page rhythms.
+- **Website**: `--space-xs…5xl` become aliases onto the ladder. Seven of the nine were already exact (`0.25/0.5/1/1.5/2/3/4rem`); `4xl`/`5xl` needed the new 96/128 rungs.
+- **Mobile**: `BabelDecorations.kSpacing*` — which had **zero call sites** and was dead weight, not a ladder in use. The live vocabulary is `SizedBoxUtil` (931 uses, defined in `base_mobile_library`) and 1,704 literal `EdgeInsets`. Those are what `BabelGap` / `BabelInsets` are for.
 
 ## 5 · Radius · Shadow · Z
 
