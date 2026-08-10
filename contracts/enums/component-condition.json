@@ -1,0 +1,34 @@
+{
+  "$meta": {
+    "name": "ComponentCondition",
+    "description": "Physical condition of a building component.",
+    "owner": "server",
+    "onUnknown": "reject",
+    "aliasMatch": "exact",
+    "provenance": {
+      "seededFrom": "babel-lambda-api/src/schemas/building-component.schema.ts:3-5 (conditionEnum)",
+      "measuredOn": "2026-08-10",
+      "count": 4
+    },
+    "drift": {
+      "note": "The honest outlier of the five: the VALUES have not diverged. It earns its place because it is declared three times independently, labelled three different ways, and has already been widened once locally — it is the cheapest one to freeze BEFORE it drifts, not after.",
+      "api": "4 — Zod enum; the column is a TS union, NOT a DB ENUM (BuildingComponent.ts:103)",
+      "admin": "4 — COMPONENT_CONDITIONS (src/lib/building-types.ts:38-46)",
+      "mobile": "4 — enum ComponentCondition (lib/models/building_component/building_component_model.dart:5-21)",
+      "localWidening": "babel-admin-panel/src/app/(dashboard)/admin/metrics/page.tsx:150 types byCondition over 'good'|'fair'|'poor'|'critical'|'unknown' — a FIFTH value the server can never send. It is a bucket for components with no condition recorded; it belongs in the metrics response type, not here.",
+      "labelKeys": "THREE label vocabularies for four values: admin `building_components_condition_*`, mobile `building_components_detail_condition_*` AND mobile `task_completion_checklist_condition_*`.",
+      "note2": "Note there is no `excellent` tier anywhere, despite the name suggesting a 5-point scale. `good` is the top."
+    },
+    "companion": {
+      "note": "ComponentStatus (active/replaced/deferred/removed) is declared alongside this one in all three repos and is equally aligned. Not shipped in v1 — it had no measured drift at all, not even a local widening."
+    }
+  },
+  "values": [
+    "good",
+    "fair",
+    "poor",
+    "critical"
+  ],
+  "deprecated": [],
+  "aliases": {}
+}

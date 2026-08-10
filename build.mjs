@@ -1,22 +1,39 @@
 #!/usr/bin/env node
 /**
- * Babel design-token generator.
+ * Babel design-token + shared-contract generator.
  *
- * Reads tokens.json (the single source of truth) and emits:
- *   - dist/tokens.css            theme-adaptive CSS custom properties → admin panel
- *   - dist/tokens.values.css     flat (no-@media) CSS values          → website
- *   - dist/tokens.flat.json      resolved flat map                    → tooling / CI ratchet
- *   - dart/lib/babel_tokens.dart Dart constants (a pub package)       → mobile
+ * Reads the two sources of truth and emits, per ecosystem:
+ *
+ *   tokens.json  →  dist/tokens.css              theme-adaptive CSS custom properties → admin panel
+ *                   dist/tokens.values.css       flat (no-@media) CSS values          → website
+ *                   dist/tokens.flat.json        resolved flat map                    → tooling / CI ratchet
+ *                   dart/lib/babel_tokens.dart   Dart constants (a pub package)       → mobile
+ *
+ *   contracts/   →  dist/contracts.mjs           frozen const maps                    → admin + api
+ *                   dist/contracts.d.ts          literal types for the above
+ *                   dist/contracts.flat.json     flat map                             → tooling / CI ratchet
+ *                   dart/lib/babel_contracts.dart Dart constants                      → mobile
+ *
+ * Contracts ride the token pipeline deliberately: it is the only distribution
+ * we have that already reaches all three clients (npm for web, pub for Flutter)
+ * off ONE git tag. A second mechanism would be a second thing to keep in sync.
  *
  * No external dependencies: alias resolution ({color.brand.500}) is done here,
  * so the pipeline runs anywhere Node runs. Never hand-edit dist/ — regenerate.
+ *
+ * `node build.mjs --check` generates everything in memory and compares it to
+ * what is on disk WITHOUT writing, exiting 1 on any drift. That is what makes
+ * "the committed output matches the source" checkable from a script rather
+ * than only from CI's `git status --porcelain`.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const DIST = join(ROOT, 'dist');
+const CONTRACTS = join(ROOT, 'contracts');
+const CHECK_ONLY = process.argv.includes('--check');
 const tokens = JSON.parse(readFileSync(join(ROOT, 'tokens.json'), 'utf8'));
 
 /* ---------- alias resolution ---------- */
@@ -326,18 +343,467 @@ ${Object.entries(tokens.font.size).map(([k, v]) => `  static const double size${
 }
 `;
 
-/* ---------- write ---------- */
-const DART_LIB = join(ROOT, 'dart', 'lib');
-mkdirSync(DIST, { recursive: true });
-mkdirSync(DART_LIB, { recursive: true });
-writeFileSync(join(DIST, 'tokens.css'), css);
-writeFileSync(join(DIST, 'tokens.values.css'), valuesCss);
-writeFileSync(join(DIST, 'tokens.flat.json'), JSON.stringify(flat, null, 2) + '\n');
-writeFileSync(join(DART_LIB, 'babel_tokens.dart'), dart);
+/* ══════════════════════════════════════════════════════════════════════════
+   CONTRACTS
 
-const nColors = Object.values(tokens.color).reduce((n, r) => n + Object.keys(r).length, 0);
-console.log(
-  `✓ built  (${nColors} color steps, ${Object.keys(tokens.semantic).length} semantic roles, ` +
-  `${Object.keys(flat).length} flat tokens)\n` +
-  `  → dist/tokens.css  dist/tokens.values.css  dist/tokens.flat.json  dart/lib/babel_tokens.dart`,
-);
+   Same shape as the token half above: read JSON, emit one artefact per
+   ecosystem. The difference is that a token is a VALUE and a contract is a
+   VOCABULARY, so the outputs carry three things a colour never needs —
+   `aliases` (legacy spellings a reader must accept), `deprecated` (values
+   still on the wire but never emitted again) and `onUnknown` (whether an
+   unrecognised value is a 400 or is passed through untouched).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'));
+const jsonFiles = (dir) =>
+  existsSync(dir)
+    ? readdirSync(dir).filter((f) => f.endsWith('.json')).sort()
+    : [];
+
+const errorCodes = readJson(join(CONTRACTS, 'error-codes.json'));
+const fieldErrorCodes = readJson(join(CONTRACTS, 'field-error-codes.json'));
+
+/** One entry per contracts/enums/*.json, in filename order. */
+const enums = jsonFiles(join(CONTRACTS, 'enums')).map((f) => {
+  const c = readJson(join(CONTRACTS, 'enums', f));
+  const pascal = c.$meta.name;                       // NotificationType
+  return {
+    file: f,
+    pascal,
+    // NotificationType → NOTIFICATION_TYPE → notificationType
+    screaming: pascal.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase(),
+    camel: pascal[0].toLowerCase() + pascal.slice(1),
+    values: c.values,
+    deprecated: c.deprecated ?? [],
+    aliases: c.aliases ?? {},
+    subsets: c.subsets ?? null,
+    onUnknown: c.$meta.onUnknown,
+    aliasMatch: c.$meta.aliasMatch ?? 'exact',
+    description: c.$meta.description,
+  };
+});
+
+/** contracts/rules/*.json merged into one flat scalar map. */
+const rules = {};
+const ruleSource = {};
+for (const f of jsonFiles(join(CONTRACTS, 'rules'))) {
+  const c = readJson(join(CONTRACTS, 'rules', f));
+  for (const [k, v] of Object.entries(c.rules)) {
+    if (k in rules)
+      throw new Error(`Duplicate rule "${k}" in rules/${f} and rules/${ruleSource[k]}`);
+    rules[k] = v;
+    ruleSource[k] = f;
+  }
+}
+
+/* ---------- contracts: flat map ----------
+   Scalars flatten to dotted keys exactly like tokens.flat.json. A value LIST
+   does NOT flatten: the list IS the atomic unit of an enum, and exploding
+   `values` into `enum.x.values.0` would make the one thing every consumer
+   reads unreadable. */
+const contractsFlat = {};
+for (const [name, value] of Object.entries(errorCodes.codes))
+  contractsFlat[`errorCode.${name}`] = value;
+for (const [name, value] of Object.entries(fieldErrorCodes.codes))
+  contractsFlat[`fieldErrorCode.${name}`] = value;
+for (const [name, params] of Object.entries(fieldErrorCodes.params))
+  contractsFlat[`fieldErrorParams.${name}`] = params;
+for (const e of enums) {
+  contractsFlat[`enum.${e.camel}.values`] = e.values;
+  contractsFlat[`enum.${e.camel}.onUnknown`] = e.onUnknown;
+  contractsFlat[`enum.${e.camel}.aliasMatch`] = e.aliasMatch;
+  if (e.deprecated.length) contractsFlat[`enum.${e.camel}.deprecated`] = e.deprecated;
+  for (const [from, to] of Object.entries(e.aliases))
+    contractsFlat[`enum.${e.camel}.aliases.${from}`] = to;
+  for (const [sub, vals] of Object.entries(e.subsets ?? {}))
+    contractsFlat[`enum.${e.camel}.subsets.${sub}`] = vals;
+}
+for (const [k, v] of Object.entries(rules)) contractsFlat[`limit.${k}`] = v;
+
+/* ---------- contracts: ESM ---------- */
+const q = (s) => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+const jsList = (arr, indent = '  ') =>
+  arr.length === 0
+    ? '[]'
+    : `[\n${arr.map((v) => `${indent}  ${q(v)},`).join('\n')}\n${indent}]`;
+const jsMap = (obj, indent = '  ') =>
+  Object.keys(obj).length === 0
+    ? '{}'
+    : `{\n${Object.entries(obj)
+        .map(([k, v]) => `${indent}  ${q(k)}: ${typeof v === 'number' ? v : q(v)},`)
+        .join('\n')}\n${indent}}`;
+
+function mjsEnum(e) {
+  const L = [`/** ${e.description} */`, `export const ${e.screaming} = Object.freeze({`];
+  L.push(`  values: Object.freeze(${jsList(e.values)}),`);
+  L.push(`  deprecated: Object.freeze(${jsList(e.deprecated)}),`);
+  L.push(`  aliases: Object.freeze(${jsMap(e.aliases)}),`);
+  if (e.subsets) {
+    L.push('  subsets: Object.freeze({');
+    for (const [k, vals] of Object.entries(e.subsets))
+      L.push(`    ${k}: Object.freeze(${jsList(vals, '    ')}),`);
+    L.push('  }),');
+  }
+  L.push(`  onUnknown: ${q(e.onUnknown)},`);
+  L.push(`  aliasMatch: ${q(e.aliasMatch)},`);
+  L.push('});');
+  return L.join('\n');
+}
+
+const contractsMjs = `// Babel shared contracts — GENERATED from contracts/. Do not edit.
+// The wire vocabulary shared by babel-lambda-api, babel-admin-panel and
+// babel-mobile. Ships over npm here and over pub as dart/lib/babel_contracts.dart;
+// both come off the SAME git tag, so a client and a server that pin the same
+// release cannot disagree about what a value is called.
+//
+// See the package README for the intended consumption shape: DERIVE from these
+// (\`z.enum(NOTIFICATION_TYPE.values)\`), never re-type them by hand — a
+// hand-copied list is exactly the drift this file exists to end.
+
+/** Stable \`error.<domain>.<action>\` codes on the \`errorCode\` field. */
+export const ERROR_CODES = Object.freeze(${jsMap(errorCodes.codes, '')});
+
+/** Stable \`error.field.*\` codes on the \`fieldErrors[]\` array of a 400. */
+export const FIELD_ERROR_CODES = Object.freeze(${jsMap(fieldErrorCodes.codes, '')});
+
+/** Constraint params each field-error code carries, for placeholder rendering. */
+export const FIELD_ERROR_PARAMS = Object.freeze({
+${Object.entries(fieldErrorCodes.params)
+  .map(([k, v]) => `  ${k}: Object.freeze(${jsList(v)}),`)
+  .join('\n')}
+});
+
+${enums.map(mjsEnum).join('\n\n')}
+
+/** Every enum contract, keyed by name — for generic tooling. */
+export const ENUMS = Object.freeze({
+${enums.map((e) => `  ${e.camel}: ${e.screaming},`).join('\n')}
+});
+
+/** Numeric and string bounds more than one repo enforces independently. */
+export const LIMITS = Object.freeze({
+${Object.entries(rules).map(([k, v]) => `  ${k}: ${v},`).join('\n')}
+});
+
+/**
+ * Resolve one wire value against a contract: an alias maps to its canonical
+ * value, a canonical or deprecated value passes through, and anything else
+ * obeys the contract's own \`onUnknown\` — \`preserve\` returns it verbatim
+ * (the caller stores what the client sent), \`reject\` returns null (the
+ * caller 400s). Honours \`aliasMatch\`.
+ *
+ * This is the one piece of behaviour worth shipping rather than describing:
+ * every consumer would otherwise re-implement it, and a coerce-vs-reject
+ * mistake in that re-implementation is silent.
+ */
+export function resolveContractValue(contract, value) {
+  if (typeof value !== 'string') return null;
+  const fold = contract.aliasMatch === 'case-insensitive'
+    ? (s) => s.trim().toLowerCase()
+    : (s) => s;
+  const needle = fold(value);
+  for (const v of contract.values) if (fold(v) === needle) return v;
+  for (const [from, to] of Object.entries(contract.aliases))
+    if (fold(from) === needle) return to;
+  for (const v of contract.deprecated) if (fold(v) === needle) return v;
+  return contract.onUnknown === 'preserve' ? value : null;
+}
+`;
+
+/* ---------- contracts: .d.ts ----------
+   Literal object types, not \`Record<string, string>\`: the point is that
+   ERROR_CODES.PERMISSION_DENIED narrows to its exact string so a typo in a
+   comparison is a compile error, and \`ErrorCode\` derives from the object
+   rather than being a second hand-maintained union. */
+const dtsMap = (obj) =>
+  Object.entries(obj).map(([k, v]) => `  readonly ${k}: ${q(v)};`).join('\n');
+const dtsTuple = (arr) =>
+  arr.length === 0 ? 'readonly []' : `readonly [${arr.map(q).join(', ')}]`;
+
+function dtsEnum(e) {
+  const L = [`/** ${e.description} */`, `export declare const ${e.screaming}: {`];
+  L.push(`  readonly values: ${dtsTuple(e.values)};`);
+  L.push(`  readonly deprecated: ${dtsTuple(e.deprecated)};`);
+  L.push(
+    `  readonly aliases: ${Object.keys(e.aliases).length === 0
+      ? 'Readonly<Record<never, never>>'
+      : `{\n${Object.entries(e.aliases)
+          .map(([k, v]) => `    readonly ${q(k)}: ${q(v)};`)
+          .join('\n')}\n  }`};`,
+  );
+  if (e.subsets) {
+    L.push('  readonly subsets: {');
+    for (const [k, vals] of Object.entries(e.subsets))
+      L.push(`    readonly ${k}: ${dtsTuple(vals)};`);
+    L.push('  };');
+  }
+  L.push(`  readonly onUnknown: ${q(e.onUnknown)};`);
+  L.push(`  readonly aliasMatch: ${q(e.aliasMatch)};`);
+  L.push('};');
+  L.push(`export type ${e.pascal} = (typeof ${e.screaming})['values'][number];`);
+  if (e.deprecated.length)
+    L.push(
+      `/** ${e.pascal} plus the values still readable off the wire. Use this for a PARSER, `
+      + `\`${e.pascal}\` for a WRITER. */`,
+      `export type ${e.pascal}OrDeprecated = ${e.pascal} | (typeof ${e.screaming})['deprecated'][number];`,
+    );
+  return L.join('\n');
+}
+
+const contractsDts = `// Babel shared contracts — GENERATED from contracts/. Do not edit.
+
+export declare const ERROR_CODES: {
+${dtsMap(errorCodes.codes)}
+};
+/** Every value ERROR_CODES can hold. */
+export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+/** Every KEY of ERROR_CODES (\`'PERMISSION_DENIED'\`), for exhaustive maps. */
+export type ErrorCodeName = keyof typeof ERROR_CODES;
+
+export declare const FIELD_ERROR_CODES: {
+${dtsMap(fieldErrorCodes.codes)}
+};
+export type FieldErrorCode = (typeof FIELD_ERROR_CODES)[keyof typeof FIELD_ERROR_CODES];
+export type FieldErrorCodeName = keyof typeof FIELD_ERROR_CODES;
+
+export declare const FIELD_ERROR_PARAMS: {
+${Object.entries(fieldErrorCodes.params)
+  .map(([k, v]) => `  readonly ${k}: ${dtsTuple(v)};`)
+  .join('\n')}
+};
+
+/** One entry of the \`fieldErrors\` array on a 400 response. */
+export interface FieldError {
+  /** Body-relative dotted path a client maps to an input; empty for form-level issues. */
+  field: string;
+  /** Full transport path including the scope segment (\`body.email\`). */
+  path: string;
+  /** A FieldErrorCode — but typed \`string\`: an older client meets newer codes. */
+  code: string;
+  /** Localized per the request's Accept-Language. The fallback when \`code\` is unknown. */
+  message: string;
+  /** Constraint values for rendering — see FIELD_ERROR_PARAMS. */
+  params: Record<string, unknown>;
+}
+
+${enums.map(dtsEnum).join('\n\n')}
+
+export declare const ENUMS: {
+${enums.map((e) => `  readonly ${e.camel}: typeof ${e.screaming};`).join('\n')}
+};
+
+export declare const LIMITS: {
+${Object.entries(rules).map(([k, v]) => `  readonly ${k}: ${v};`).join('\n')}
+};
+
+/** Shape shared by every enum contract above. */
+export interface EnumContract {
+  readonly values: readonly string[];
+  readonly deprecated: readonly string[];
+  readonly aliases: Readonly<Record<string, string>>;
+  readonly subsets?: Readonly<Record<string, readonly string[]>>;
+  readonly onUnknown: 'preserve' | 'reject';
+  readonly aliasMatch: 'exact' | 'case-insensitive';
+}
+
+/**
+ * Resolve a wire value against a contract. Returns the canonical value, or the
+ * input verbatim when the contract preserves unknowns, or null when it rejects.
+ */
+export declare function resolveContractValue(
+  contract: EnumContract,
+  value: unknown,
+): string | null;
+`;
+
+/* ---------- contracts: Dart ---------- */
+/** SCREAMING_SNAKE → lowerCamel, the Dart constant convention. */
+const dartConst = (s) => s.toLowerCase().replace(/_(.)/g, (_, c) => c.toUpperCase());
+/** Reserved words cannot be identifiers; suffix rather than silently mangle. */
+const DART_RESERVED = new Set([
+  'abstract', 'as', 'assert', 'async', 'await', 'break', 'case', 'catch', 'class',
+  'const', 'continue', 'covariant', 'default', 'deferred', 'do', 'dynamic', 'else',
+  'enum', 'export', 'extends', 'extension', 'external', 'factory', 'false', 'final',
+  'finally', 'for', 'get', 'hide', 'if', 'implements', 'import', 'in', 'interface',
+  'is', 'late', 'library', 'mixin', 'new', 'null', 'on', 'operator', 'part',
+  'required', 'rethrow', 'return', 'set', 'show', 'static', 'super', 'switch',
+  'sync', 'this', 'throw', 'true', 'try', 'typedef', 'var', 'void', 'while',
+  'with', 'yield',
+]);
+const dartId = (s) => (DART_RESERVED.has(s) ? `${s}_` : s);
+const dartStr = (s) => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+const dartList = (arr, indent = '  ') =>
+  arr.length === 0
+    ? '<String>[]'
+    : `<String>[\n${arr.map((v) => `${indent}  ${dartStr(v)},`).join('\n')}\n${indent}]`;
+const dartMap = (obj, indent = '  ') =>
+  Object.keys(obj).length === 0
+    ? '<String, String>{}'
+    : `<String, String>{\n${Object.entries(obj)
+        .map(([k, v]) => `${indent}  ${dartStr(k)}: ${dartStr(v)},`)
+        .join('\n')}\n${indent}}`;
+
+function dartCodeClass(className, doc, codes) {
+  const L = [`/// ${doc}`, `abstract final class ${className} {`];
+  for (const [name, value] of Object.entries(codes))
+    L.push(`  static const String ${dartId(dartConst(name))} = ${dartStr(value)};`);
+  L.push('');
+  L.push('  /// Every value above, for membership tests.');
+  L.push(`  static const List<String> values = ${dartList(Object.values(codes))};`);
+  L.push('}');
+  return L.join('\n');
+}
+
+function dartEnumClass(e) {
+  const L = [`/// ${e.description}`, `abstract final class Babel${e.pascal} {`];
+  L.push(`  static const List<String> values = ${dartList(e.values)};`);
+  L.push('');
+  L.push('  /// Still readable off the wire; never emit these.');
+  L.push(`  static const List<String> deprecated = ${dartList(e.deprecated)};`);
+  L.push('');
+  L.push('  /// Legacy spelling -> canonical value.');
+  L.push(`  static const Map<String, String> aliases = ${dartMap(e.aliases)};`);
+  if (e.subsets) {
+    for (const [k, vals] of Object.entries(e.subsets)) {
+      L.push('');
+      L.push(`  static const List<String> ${dartId(k)} = ${dartList(vals)};`);
+    }
+  }
+  L.push('');
+  L.push(`  static const String onUnknown = ${dartStr(e.onUnknown)};`);
+  L.push(`  static const String aliasMatch = ${dartStr(e.aliasMatch)};`);
+  L.push('');
+  L.push('  /// See [resolveContractValue] — the Dart twin of the npm helper.');
+  L.push('  static String? resolve(String? value) => resolveContractValue(');
+  L.push('        value,');
+  L.push('        values: values,');
+  L.push('        aliases: aliases,');
+  L.push('        deprecated: deprecated,');
+  L.push('        onUnknown: onUnknown,');
+  L.push('        aliasMatch: aliasMatch,');
+  L.push('      );');
+  L.push('}');
+  return L.join('\n');
+}
+
+const contractsDart = `// Babel shared contracts — GENERATED from contracts/. Do not edit.
+//
+// The wire vocabulary shared with babel-lambda-api and babel-admin-panel. This
+// is the pub half of the same release the web apps get over npm, so a mobile
+// binary and a server on the same tag cannot disagree about what a value is
+// called.
+//
+// Pure Dart — no Flutter import, unlike babel_tokens.dart. A contract is a
+// string vocabulary; nothing here needs a Widget, so this file is usable from
+// a plain \`dart\` isolate and from tests without a binding.
+//
+// Values are Strings rather than a Dart \`enum\` ON PURPOSE. A generated enum
+// would make an unrecognised server value unrepresentable, and the whole point
+// of \`onUnknown: preserve\` is that an old binary meeting a new value must keep
+// working. Wrap these in your own enum where you want exhaustiveness, and keep
+// a fallback member (mobile already does: NotificationType.unknown).
+
+${dartCodeClass(
+  'BabelErrorCodes',
+  'Stable `error.<domain>.<action>` codes on the `errorCode` field.',
+  errorCodes.codes,
+)}
+
+${dartCodeClass(
+  'BabelFieldErrorCodes',
+  'Stable `error.field.*` codes on the `fieldErrors` array of a 400.',
+  fieldErrorCodes.codes,
+)}
+
+/// Constraint params each field-error code carries, for placeholder rendering.
+abstract final class BabelFieldErrorParams {
+  static const Map<String, List<String>> byCode = <String, List<String>>{
+${Object.entries(fieldErrorCodes.params)
+  .map(([k, v]) => `    ${dartStr(fieldErrorCodes.codes[k])}: ${dartList(v, '    ')},`)
+  .join('\n')}
+  };
+}
+
+${enums.map(dartEnumClass).join('\n\n')}
+
+/// Numeric and string bounds more than one repo enforces independently.
+abstract final class BabelLimits {
+${Object.entries(rules)
+  .map(([k, v]) => `  static const int ${dartId(k)} = ${v};`)
+  .join('\n')}
+}
+
+/// Resolve one wire value against a contract: an alias maps to its canonical
+/// value, a canonical or deprecated value passes through, and anything else
+/// obeys [onUnknown] — \`preserve\` returns it verbatim, \`reject\` returns null.
+///
+/// Kept as a free function so the generated classes stay pure data.
+String? resolveContractValue(
+  String? value, {
+  required List<String> values,
+  required Map<String, String> aliases,
+  required List<String> deprecated,
+  required String onUnknown,
+  required String aliasMatch,
+}) {
+  if (value == null) return null;
+  String fold(String s) =>
+      aliasMatch == 'case-insensitive' ? s.trim().toLowerCase() : s;
+  final needle = fold(value);
+  for (final v in values) {
+    if (fold(v) == needle) return v;
+  }
+  for (final entry in aliases.entries) {
+    if (fold(entry.key) == needle) return entry.value;
+  }
+  for (final v in deprecated) {
+    if (fold(v) == needle) return v;
+  }
+  return onUnknown == 'preserve' ? value : null;
+}
+`;
+
+/* ---------- write (or, with --check, compare) ---------- */
+const DART_LIB = join(ROOT, 'dart', 'lib');
+const outputs = [
+  [join(DIST, 'tokens.css'), css],
+  [join(DIST, 'tokens.values.css'), valuesCss],
+  [join(DIST, 'tokens.flat.json'), JSON.stringify(flat, null, 2) + '\n'],
+  [join(DART_LIB, 'babel_tokens.dart'), dart],
+  [join(DIST, 'contracts.mjs'), contractsMjs],
+  [join(DIST, 'contracts.d.ts'), contractsDts],
+  [join(DIST, 'contracts.flat.json'), JSON.stringify(contractsFlat, null, 2) + '\n'],
+  [join(DART_LIB, 'babel_contracts.dart'), contractsDart],
+];
+
+const rel = (p) => p.slice(ROOT.length + 1);
+
+if (CHECK_ONLY) {
+  const stale = outputs.filter(
+    ([p, content]) => !existsSync(p) || readFileSync(p, 'utf8') !== content,
+  );
+  if (stale.length) {
+    console.error(
+      `✗ ${stale.length} generated file(s) do not match the source:\n`
+      + stale.map(([p]) => `    ${rel(p)}`).join('\n')
+      + '\n\n  Run `npm run build` and commit the result.',
+    );
+    process.exit(1);
+  }
+  console.log(`✓ all ${outputs.length} generated files match tokens.json + contracts/`);
+} else {
+  mkdirSync(DIST, { recursive: true });
+  mkdirSync(DART_LIB, { recursive: true });
+  for (const [p, content] of outputs) writeFileSync(p, content);
+
+  const nColors = Object.values(tokens.color).reduce((n, r) => n + Object.keys(r).length, 0);
+  console.log(
+    `✓ tokens     ${nColors} color steps, ${Object.keys(tokens.semantic).length} semantic roles, `
+    + `${Object.keys(flat).length} flat tokens\n`
+    + `✓ contracts  ${Object.keys(errorCodes.codes).length} error codes, `
+    + `${Object.keys(fieldErrorCodes.codes).length} field-error codes, `
+    + `${enums.length} enums (${enums.reduce((n, e) => n + e.values.length, 0)} values), `
+    + `${Object.keys(rules).length} limits\n`
+    + `  → ${outputs.map(([p]) => rel(p)).join('  ')}`,
+  );
+}

@@ -1,0 +1,95 @@
+{
+  "$meta": {
+    "name": "Babel per-field validation error codes",
+    "description": "The `error.field.*` family carried in the additive `fieldErrors` array of 400 responses. One entry per offending input, so a client can render the message BESIDE the field instead of as a form-level banner.",
+    "owner": "server",
+    "onUnknown": "preserve",
+    "envelope": {
+      "note": "Shape of one `fieldErrors` entry (api src/i18n/errors.ts:623-637).",
+      "field": "body-relative dotted path the client maps to an input (`email`, `items.0.name`); empty for form-level issues",
+      "path": "full transport path including scope (`body.email`, `query.page`)",
+      "code": "one of the codes below",
+      "message": "localized per the request Accept-Language — the fallback when `code` is unknown",
+      "params": "constraint values for client-side rendering; see `params` below"
+    },
+    "derivedFrom": {
+      "note": "Mapped from ZodIssueCode by the API, but the WIRE VALUES ARE OURS — a Zod upgrade that renames an issue kind is absorbed at the mapper and never reaches a client. `invalid_type` splits on whether the value was absent (REQUIRED) or the wrong shape (INVALID_TYPE); `invalid_string` splits on the string check (email / url / everything else). Anything unmapped becomes INVALID.",
+      "mapper": "babel-lambda-api/src/middleware/validate.middleware.ts:31-125 (classifyZodIssue)",
+      "zodIssueCode": {
+        "invalid_type": "INVALID_TYPE",
+        "too_small": "TOO_SMALL",
+        "too_big": "TOO_BIG",
+        "invalid_string": "INVALID_STRING",
+        "invalid_enum_value": "INVALID_ENUM_VALUE",
+        "invalid_date": "INVALID_DATE",
+        "not_multiple_of": "NOT_MULTIPLE_OF",
+        "unrecognized_keys": "UNKNOWN_KEY",
+        "invalid_literal": "INVALID_LITERAL",
+        "invalid_union": "INVALID_UNION",
+        "not_finite": "NOT_FINITE",
+        "custom": "CUSTOM"
+      }
+    },
+    "provenance": {
+      "seededFrom": "babel-lambda-api/src/i18n/errors.ts — `export enum FieldErrorCode` (lines 580-618)",
+      "measuredOn": "2026-08-10",
+      "count": 16
+    },
+    "drift": {
+      "note": "The starkest gap of the four contracts: the server localizes all 16 in four languages, and NEITHER client ships a single translation key for any of them. Both render the server `message` verbatim, so a field error is the one part of the UI that ignores the user's language preference when the server and client disagree about it. Mobile is worse than admin: bad_request_exception.dart keeps only `message` and DISCARDS `code` and `params`, so it could not localize them today even if the keys existed.",
+      "api": "16 codes, 4 languages (FIELD_ERROR_MESSAGES)",
+      "admin": "0 translation keys; code + params reach the form layer (src/lib/api-error.ts FieldErrorDetail)",
+      "mobile": "0 translation keys; code + params discarded at parse (lib/common/errors/bad_request_exception.dart)"
+    }
+  },
+  "codes": {
+    "REQUIRED": "error.field.required",
+    "INVALID_TYPE": "error.field.invalid_type",
+    "TOO_SMALL": "error.field.too_small",
+    "TOO_BIG": "error.field.too_big",
+    "INVALID_EMAIL": "error.field.invalid_email",
+    "INVALID_URL": "error.field.invalid_url",
+    "INVALID_STRING": "error.field.invalid_string",
+    "INVALID_ENUM_VALUE": "error.field.invalid_enum_value",
+    "INVALID_DATE": "error.field.invalid_date",
+    "NOT_MULTIPLE_OF": "error.field.not_multiple_of",
+    "CUSTOM": "error.field.custom",
+    "UNKNOWN_KEY": "error.field.unknown_key",
+    "INVALID_LITERAL": "error.field.invalid_literal",
+    "INVALID_UNION": "error.field.invalid_union",
+    "NOT_FINITE": "error.field.not_finite",
+    "INVALID": "error.field.invalid"
+  },
+  "params": {
+    "REQUIRED": [],
+    "INVALID_TYPE": [
+      "expected"
+    ],
+    "TOO_SMALL": [
+      "min"
+    ],
+    "TOO_BIG": [
+      "max"
+    ],
+    "INVALID_EMAIL": [],
+    "INVALID_URL": [],
+    "INVALID_STRING": [],
+    "INVALID_ENUM_VALUE": [
+      "options"
+    ],
+    "INVALID_DATE": [],
+    "NOT_MULTIPLE_OF": [
+      "multipleOf"
+    ],
+    "CUSTOM": [],
+    "UNKNOWN_KEY": [
+      "keys"
+    ],
+    "INVALID_LITERAL": [
+      "expected"
+    ],
+    "INVALID_UNION": [],
+    "NOT_FINITE": [],
+    "INVALID": []
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "$meta": {
+    "name": "TaskStatus",
+    "description": "Lifecycle status of a task. Since the 2026-07-27 vocabulary split, maintenance tasks and service requests DO NOT share one status list — use the `subsets` below rather than `values` when rendering a picker.",
+    "owner": "server",
+    "ownerNote": "The server owns this: it runs the transition machine and rejects illegal moves (TASK_STATUS_MODE = enforce in both environments since 2026-07-28).",
+    "onUnknown": "reject",
+    "aliasMatch": "exact",
+    "provenance": {
+      "seededFrom": "babel-lambda-api/src/service/task-status.ts — MAINTENANCE_STATUSES (73-97) and SERVICE_REQUEST_STATUSES (99-112); writable subsets at 120-135; aliases at 143-147.",
+      "measuredOn": "2026-08-10",
+      "count": 11
+    },
+    "subsetsNote": "maintenance / service are what a row of that type MAY hold. writableMaintenance / writableService are what the GENERIC update endpoint accepts — the rest are engine- or endpoint-only: `missed` (strict-recurrence engine), `skipped` (POST /task/:id/skip), `rejected` (PUT /task/:id/reject), `submitted` (creation-only, server-stamped). A picker built from `values` instead of a subset offers moves the server will refuse.",
+    "drift": {
+      "note": "The worst of the five: FOUR spellings live inside the API alone, and the per-type split is re-derived by hand in three places.",
+      "api": "11 canonical, reachable through TASK_STATUSES (13 incl. pre-split) and a SEPARATELY hand-listed WRITABLE_TASK_STATUSES (9, task.schema.ts:52-72) that is not spread from the two per-type writable sets — an in-repo drift seam.",
+      "mobile": "13 enum constants (babel_localized_enums.dart:330-366) with maintenanceStatuses (6) and serviceStatuses (7) matching the API subsets exactly.",
+      "admin": "7 maintenance / 7 service (src/lib/tasks/status.ts:60-88). The extra one is `taskStatusDormant` — see `derived` below. A SECOND vocabulary lives in src/lib/status-badges.ts, whose taskStatusToBadge() switches on bare lowercase forms (`completed`, `in_progress`, `cancelled`).",
+      "bareSpelling": "babel-lambda-api/src/service/vendor-link-token.service.ts:119 declares CLOSED_TASK_STATUSES = ['completed','cancelled','retired'] and compares it against String(task.status), which holds PREFIXED values — so the comparison can never match. Worth a look; not encoded here."
+    },
+    "derived": {
+      "note": "Computed, never stored, never sent. Must NOT be added to `values` by a consumer adopting this contract.",
+      "taskStatusDormant": "Admin-only (src/lib/tasks/status.ts:35). An ACTIVE maintenance program whose validStartDate/validEndDate season window excludes today."
+    }
+  },
+  "values": [
+    "taskStatusActive",
+    "taskStatusBlocked",
+    "taskStatusRetired",
+    "taskStatusCompleted",
+    "taskStatusSkipped",
+    "taskStatusMissed",
+    "taskStatusSubmitted",
+    "taskStatusApproved",
+    "taskStatusInProgress",
+    "taskStatusCancelled",
+    "taskStatusRejected"
+  ],
+  "subsets": {
+    "maintenance": [
+      "taskStatusActive",
+      "taskStatusBlocked",
+      "taskStatusRetired",
+      "taskStatusCompleted",
+      "taskStatusSkipped",
+      "taskStatusMissed"
+    ],
+    "service": [
+      "taskStatusSubmitted",
+      "taskStatusApproved",
+      "taskStatusInProgress",
+      "taskStatusBlocked",
+      "taskStatusCompleted",
+      "taskStatusCancelled",
+      "taskStatusRejected"
+    ],
+    "writableMaintenance": [
+      "taskStatusActive",
+      "taskStatusBlocked",
+      "taskStatusRetired",
+      "taskStatusCompleted"
+    ],
+    "writableService": [
+      "taskStatusApproved",
+      "taskStatusInProgress",
+      "taskStatusBlocked",
+      "taskStatusCompleted",
+      "taskStatusCancelled"
+    ]
+  },
+  "deprecated": [
+    "taskStatusToDo",
+    "taskStatusOnHold"
+  ],
+  "deprecatedNote": "The pre-2026-07-27 SHARED vocabulary. Still accepted on the wire from old clients and still present in rows until sweep migration 20260727-07 runs; the service layer canonicalizes them per type on read and write. Readers must accept; writers must not emit.",
+  "aliases": {
+    "taskStatusNotStarted": "taskStatusToDo",
+    "taskStatusStarted": "taskStatusInProgress"
+  },
+  "aliasesNote": "Pre-2026-07-19 spellings. Note taskStatusNotStarted resolves to a DEPRECATED value, not a canonical one — it needs both hops. (taskStatusBlocked used to alias onHold; it is canonical now, so it is no longer an alias.)"
+}
