@@ -1,0 +1,67 @@
+{
+  "$meta": {
+    "name": "Babel shared limits",
+    "description": "Numeric and string bounds that MORE THAN ONE repo enforces independently. A client maxLength that disagrees with the server is a defect class of its own: either the user is blocked from something valid, or they type past a limit and get a 400 at submit.",
+    "inclusionRule": "ONLY bounds measured to AGREE at every site that declares them. A bound the repos DISAGREE about is not canon by fiat — picking the winner is an owner decision, and those are listed under `$conflicts` instead so the decision has its evidence attached.",
+    "provenance": {
+      "measuredOn": "2026-08-10"
+    },
+    "sites": {
+      "otpCodeLength": "api public.schema.ts:90,131 + user.schema.ts:46,141,200-204 · admin login/page.tsx:168 · mobile otp_verification_view.dart:767",
+      "otpExpiryMinutes": "api utils/constants.ts:140 (OTP_EXPIRY_MS) · mobile login_provider.dart:97-112 (comment: \"matching server OTP expiry\")",
+      "quotaPercentMin_Max": "api unit.schema.ts:219,250 + charge-pool.schema.ts:13 · admin units-quota.ts:31 · mobile unit_form_controller.dart:171 (comment cites unit.schema.ts:219)",
+      "accountingDescriptionMaxLength": "api accounting.schema.ts:237,358,676,732 · admin purchase-order-form-schema.ts:208,236 · mobile purchase_order_form_screen.dart:443",
+      "notificationInboxPageSize_Max": "api notification.schema.ts:122-128 (default 20, max 50) · admin notifications-utils.ts:253 · mobile notification_history_tab.dart:60",
+      "paymentScheduleCountMin_Max": "api payment-schedule.schema.ts:121 · admin schedule-form-schema.ts:259 · mobile edit_timeline_screen.dart:334-336",
+      "taskRejectionReasonMinLength_MaxLength": "api task.schema.ts:543-546 · mobile reject_reason_sheet.dart:9 + task_detail_screen.dart:36",
+      "buildingComponent_": "api building-component.schema.ts:15,16,31 · admin component-form-schema.ts:134,118,184",
+      "unit_": "api unit.schema.ts:210-273 · admin unit-info-form-schema.ts:196-385. Mobile declares NO maxLength on any unit field (unit_form_controller.dart), so adopting these is pure gain there.",
+      "vendorName_InsuranceMaxLength": "api vendor.schema.ts:159 + vendor.schema.ts:28-29 · admin provider-form-schema.ts:342,353,377",
+      "vendorLicense_Gst_Qst_NeqMaxLength": "admin provider-form-schema.ts:268,291,301,311 · mobile add_service_provider.dart:433,458,465,472. THE API DECLARES NO BOUND on any of these — another inverted-ownership case: the two clients agree with each other and the server is silent.",
+      "groupChatNameMaxLength": "api stream-chat.schema.ts:21 · admin messages/page.tsx:1616"
+    },
+    "$conflicts": {
+      "note": "Measured disagreements. NOT shipped as rules — each needs an owner decision, and each is a live defect today.",
+      "uploadMaxBytes": "api 50MB (association-document.controller.ts:44, storage.schema.ts:69) vs admin 10MB (documents/page.tsx:100, and a HARD 10MB ceiling in admin's own Next proxy at api/proxy/[...path]/route.ts:321) vs mobile 10MB (hoa_file_provider.dart:13). Five numbers across the surfaces: 5/10/15/50/100MB. Admin's messages page allows 100MB (messages/page.tsx:127) — 10x its own proxy cap, so those uploads cannot succeed.",
+      "taskAttachmentMaxBytes": "api 15MB (task-document.controller.ts:235) and mobile 15MB (create_task_screen.dart:965) AGREE — but admin's proxy caps at 10MB, so a 10-15MB task attachment the API accepts is rejected before it leaves admin. Left out because adopting 15MB in admin would break against admin itself.",
+      "uploadAllowedTypes": "api presigned allows 15 MIME types incl. webp/heic (storage.schema.ts:13-27); api multipart allows 11 extensions with NO webp and NO heic (association-document.controller.ts:43); mobile lets the user PICK heic/webp (create_task_screen.dart:966). A phone photo can be chosen and then refused.",
+      "otpResendCooldownSeconds": "api 30s (user-auth.service.ts:831, contact-verification.service.ts:51) but 60s in vendor-claim.service.ts:60 — the API disagrees with ITSELF. Both clients use 60s (admin security.ts:144, mobile verify_move_email.dart:90), so users wait twice as long as they must.",
+      "otpMaxAttempts": "api 5 (utils/constants.ts:61) counts WRONG-CODE attempts per issued code; mobile 3 (login_provider.dart:83) counts SEND attempts per 10-minute window. Different numbers AND different semantics — this one needs a definition before it can have a value.",
+      "phoneMaxLength": "api 32 (user.schema.ts:182) vs api 50 (vendor.schema.ts:160, vendor-claim.schema.ts:106). Neither client declares one.",
+      "emailMaxLength": "mobile 100 everywhere (text_field.dart:227 shared default); api and admin declare NO bound. Mobile silently truncates addresses the other two accept.",
+      "listPageSize": "task list: api has NO .max() at all (task.schema.ts:285,332,451,579,591,602), admin 50, mobile 30. audit trail: api 50, admin 50, mobile 30. purchase orders: api max 500/default 50, admin 25 AND 50 in two files, mobile 25. Page size is probably a per-surface product decision rather than a contract."
+    }
+  },
+  "rules": {
+    "otpCodeLength": 6,
+    "otpExpiryMinutes": 10,
+    "quotaPercentMin": 0,
+    "quotaPercentMax": 100,
+    "accountingDescriptionMaxLength": 500,
+    "notificationInboxPageSize": 20,
+    "notificationInboxPageSizeMax": 50,
+    "paymentScheduleCountMin": 1,
+    "paymentScheduleCountMax": 24,
+    "taskRejectionReasonMinLength": 3,
+    "taskRejectionReasonMaxLength": 1000,
+    "buildingComponentUniformatCodeMaxLength": 20,
+    "buildingComponentNameMaxLength": 255,
+    "buildingComponentNotesMaxLength": 2000,
+    "unitNameMaxLength": 255,
+    "unitAddressMaxLength": 500,
+    "unitFloorNameMaxLength": 255,
+    "unitDescriptionMaxLength": 2000,
+    "unitLotNumberMaxLength": 50,
+    "unitFlooringTypeMaxLength": 100,
+    "unitHeatingTypeMaxLength": 100,
+    "unitCoolingTypeMaxLength": 100,
+    "vendorNameMaxLength": 255,
+    "vendorLicenseNumberMaxLength": 50,
+    "vendorGstNumberMaxLength": 30,
+    "vendorQstNumberMaxLength": 30,
+    "vendorNeqNumberMaxLength": 20,
+    "vendorInsurancePolicyNumberMaxLength": 100,
+    "vendorInsuranceCoverageTypeMaxLength": 100,
+    "groupChatNameMaxLength": 80
+  }
+}

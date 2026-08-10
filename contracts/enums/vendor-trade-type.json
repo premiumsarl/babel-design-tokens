@@ -1,0 +1,83 @@
+{
+  "$meta": {
+    "name": "VendorTradeType",
+    "alsoKnownAs": [
+      "ServiceProviderType (mobile)",
+      "PROVIDER_TYPES (admin)",
+      "TRADE_KEYS (api)"
+    ],
+    "description": "The trade a vendor practises. Stored as free text in `providers.type` and `tasks.category`, and read by the CAPEX/OPEX classification engine.",
+    "owner": "client",
+    "ownerNote": "OWNERSHIP IS INVERTED here and that is the whole point of shipping it. The trade list is client-owned: an installed mobile binary cannot be recalled and already writes the prefixed localization key on every vendor edit, so the canonical spelling is whatever mobile sends — not whatever the server would have preferred. These values are seeded FROM mobile's ServiceProviderType, and the server's job is to spell a known trade consistently, never to police which trades exist.",
+    "onUnknown": "preserve",
+    "onUnknownNote": "COERCE, NEVER REJECT. A trade absent from `values` is legitimate — it is stored verbatim. Rejecting would break a client that shipped a trade we have not heard of yet.",
+    "aliasMatch": "case-insensitive",
+    "aliasMatchNote": "The server normalizes by stripping a leading `serviceProvider` (any case) and lowercasing, then looking the remainder up (babel-lambda-api/src/service/capex-recommendation/capex-recommendation.types.ts:192-207, canonicalCategoryKey). Because every bare spelling of a KNOWN trade is listed explicitly below, a case-insensitive lookup over values + aliases reproduces that behaviour exactly. The prefix strip only ever mattered for an UNKNOWN trade, and an unknown trade is preserved verbatim anyway.",
+    "provenance": {
+      "seededFrom": "babel-mobile/lib/models/babel_localized_enums.dart:127-163 — `enum ServiceProviderType with LocalizedEnum`. `values` are the enum KEYS; `aliases` are the enum MEMBER NAMES (`.name`), which is the bare spelling that leaked to production.",
+      "measuredOn": "2026-08-10",
+      "count": 23
+    },
+    "drift": {
+      "note": "Uniquely, the three code-level lists AGREE — 23/23/23, same order. The drift is in the DATA and in the label catalogues, and it has already cost a live defect.",
+      "api": "23 (src/service/trade-vocabulary.ts TRADE_KEYS)",
+      "admin": "23 (dashboard/vendors/providers/providers-constants.ts PROVIDER_TYPES)",
+      "mobile": "23 (ServiceProviderType)",
+      "storedData": "TWO spellings reached production for the same trades: the localization key (`serviceProviderPlumbing`) and the bare enum member (`plumbing`), the latter being `.name` serialized where `.key` was meant.",
+      "shippedDefect": "The CAPEX/OPEX engine keys its rule table on the localization key and matched with `===`, so bare-typed vendors scored nothing and the engine silently returned NO suggestion for most vendors. api#1153 fixed the matching; trade-vocabulary.ts fixed the spelling on write. This contract is what stops a third client re-introducing it.",
+      "labelCatalogue": "babel-admin-panel/src/i18n/*.json carries 25 `serviceProvider*` keys — two orphans, `serviceProviderInspector` and `serviceProviderManagement`, have no counterpart in ANY repo's code. Mobile has exactly 23. Left out of `values` deliberately: adding a trade because a translator typed a label is backwards."
+    }
+  },
+  "values": [
+    "serviceProviderPlumbing",
+    "serviceProviderElectrical",
+    "serviceProviderHvac",
+    "serviceProviderElevator",
+    "serviceProviderRoofing",
+    "serviceProviderFireProtection",
+    "serviceProviderGeneralContractor",
+    "serviceProviderProfessionalServices",
+    "serviceProviderCleaningSanitation",
+    "serviceProviderOutdoorGroundsMaintenance",
+    "serviceProviderSafetySecurity",
+    "serviceProviderPestControl",
+    "serviceProviderWasteManagement",
+    "serviceProviderEngineering",
+    "serviceProviderArchitecture",
+    "serviceProviderLegal",
+    "serviceProviderAccounting",
+    "serviceProviderInsurance",
+    "serviceProviderGeneralMaintenanceRepair",
+    "serviceProviderSpecialtyServices",
+    "serviceProviderNotary",
+    "serviceProviderRealtor",
+    "serviceProviderOther"
+  ],
+  "deprecated": [],
+  "aliases": {
+    "plumbing": "serviceProviderPlumbing",
+    "electrical": "serviceProviderElectrical",
+    "hvac": "serviceProviderHvac",
+    "elevator": "serviceProviderElevator",
+    "roofing": "serviceProviderRoofing",
+    "fireProtection": "serviceProviderFireProtection",
+    "generalContractor": "serviceProviderGeneralContractor",
+    "professionalServices": "serviceProviderProfessionalServices",
+    "cleaningSanitation": "serviceProviderCleaningSanitation",
+    "outdoorGroundsMaintenance": "serviceProviderOutdoorGroundsMaintenance",
+    "safetySecurity": "serviceProviderSafetySecurity",
+    "pestControl": "serviceProviderPestControl",
+    "wasteManagement": "serviceProviderWasteManagement",
+    "engineering": "serviceProviderEngineering",
+    "architecture": "serviceProviderArchitecture",
+    "legal": "serviceProviderLegal",
+    "accounting": "serviceProviderAccounting",
+    "insurance": "serviceProviderInsurance",
+    "generalMaintenanceRepair": "serviceProviderGeneralMaintenanceRepair",
+    "specialtyServices": "serviceProviderSpecialtyServices",
+    "notary": "serviceProviderNotary",
+    "realtor": "serviceProviderRealtor",
+    "other": "serviceProviderOther"
+  },
+  "aliasesNote": "Legacy bare spellings still present in stored rows. Readers must accept them and MAP THEM to the canonical value; writers must emit only `values`. A caller matching the RAW column in SQL needs both spellings — see trade-vocabulary.ts storedSpellingsOf."
+}

@@ -1,0 +1,42 @@
+{
+  "$meta": {
+    "name": "TaskPriority",
+    "description": "Priority tier of a maintenance task or service request.",
+    "owner": "shared",
+    "ownerNote": "Canonical is what MOBILE already speaks (`taskPriority*`); the admin panel speaks a short form. Same inversion as VendorTradeType, milder: the installed binary sends the long form, so the long form wins.",
+    "onUnknown": "reject",
+    "onUnknownNote": "Unlike the trade list this vocabulary is CLOSED — four tiers, no more. The API normalizes then pipes through a Zod enum, so an unrecognized priority is a 400, not a passthrough.",
+    "aliasMatch": "case-insensitive",
+    "aliasMatchNote": "The API lowercases and trims before the alias lookup, so `LOW`, `Low` and `low` all resolve. Only the distinct real-world spellings are listed.",
+    "provenance": {
+      "seededFrom": "babel-lambda-api/src/schemas/task-priority.ts:17-22 (TASK_PRIORITIES)",
+      "aliasesFrom": "task-priority.ts:26-37 (PRIORITY_ALIASES) plus mobile's legacy `taskPriorityUrgent` alias (babel_localized_enums.dart:465-472). The API's lowercased-canonical entries (`taskprioritylow` …) are an artifact of that case-insensitive lookup, not distinct wire spellings, so they are not listed.",
+      "measuredOn": "2026-08-10",
+      "count": 4
+    },
+    "drift": {
+      "note": "Two vocabularies for four values, and THE TOP TIER HAS TWO NAMES — the kind of disagreement a shared file exists to end.",
+      "api": "4 canonical `taskPriority*` + a 10-entry alias table",
+      "mobile": "4 canonical `taskPriority*` + 1 legacy alias (taskPriorityUrgent → critical)",
+      "admin": "4 SHORT forms — `low` | `medium` | `high` | `urgent` (src/lib/tasks/priority.ts:19-28), re-declared inline a second time in operations/tasks/new/tasks-form-schema.ts:136-141",
+      "topTier": "Canonical is CRITICAL. `urgent` is the admin panel's short form for it — not a fifth tier, and not a different severity.",
+      "column": "tasks.priority is a plain STRING (Task.ts:163) — no DB constraint holds this."
+    }
+  },
+  "values": [
+    "taskPriorityLow",
+    "taskPriorityMedium",
+    "taskPriorityHigh",
+    "taskPriorityCritical"
+  ],
+  "deprecated": [],
+  "aliases": {
+    "low": "taskPriorityLow",
+    "medium": "taskPriorityMedium",
+    "high": "taskPriorityHigh",
+    "urgent": "taskPriorityCritical",
+    "emergency": "taskPriorityCritical",
+    "critical": "taskPriorityCritical",
+    "taskPriorityUrgent": "taskPriorityCritical"
+  }
+}
