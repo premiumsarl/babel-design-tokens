@@ -292,8 +292,95 @@ function dartInsets() {
     L.push(`  static const EdgeInsets h${gapName(k)} = EdgeInsets.symmetric(horizontal: BabelSpace.s${dartName(k)});`);
   for (const k of dartSpaceKeys)
     L.push(`  static const EdgeInsets v${gapName(k)} = EdgeInsets.symmetric(vertical: BabelSpace.s${dartName(k)});`);
-  // The card/screen padding role, so a screen does not have to remember 16.
-  L.push(`  static const EdgeInsets card = EdgeInsets.all(BabelSpace.s${dartName('4')});`);
+  L.push('}');
+  return L.join('\n');
+}
+
+/**
+ * spaceRole for Dart — the SAME roles the CSS build emits, generated from
+ * the same source instead of restated by hand.
+ *
+ * This exists because the hand-written line it replaces had drifted. Dart
+ * carried `BabelInsets.card = all(space.4)` = 16 while CSS resolved
+ * `--pad-card` to space.6 = 24: one role name, two numbers, in the package
+ * whose whole purpose is one vocabulary. Nothing consumed the Dart side, so
+ * the divergence was invisible and free to fix — which is exactly the window
+ * in which to fix it.
+ *
+ * Three roles do not survive the trip, and are skipped deliberately rather
+ * than approximated:
+ *   - `measure-prose` is 60ch. `ch` is a font-relative CSS unit with no
+ *     Dart equivalent; a hardcoded pixel guess would be a different token
+ *     wearing this one's name.
+ *   - numeric roles (`control-h`) already ship as [BabelSize], and emitting
+ *     them twice would let the two copies disagree later.
+ *   - responsive roles cannot be `const` in Dart, because the value depends
+ *     on a width only known at layout time. Their steps are emitted as
+ *     separate constants plus a resolver, so the breakpoints stay in the
+ *     token source rather than being re-typed in each app.
+ */
+function dartRoles() {
+  const rung = (v) => {
+    const m = String(v).trim().match(/^\{space\.([^}]+)\}$/);
+    return m ? `BabelSpace.s${dartName(m[1])}` : null;
+  };
+  const L = [];
+  L.push('/// Spacing ROLES — which number a given JOB uses, as opposed to');
+  L.push('/// [BabelSpace], which says which numbers are legal at all.');
+  L.push('///');
+  L.push('/// Spend these when the job has a name: a card inset is');
+  L.push('/// [BabelRole.padCard], not `BabelInsets.a6`. The rung is an');
+  L.push('/// implementation detail of the role and may move; the job does not.');
+  L.push('abstract final class BabelRole {');
+  for (const [k, v] of Object.entries(tokens.spaceRole)) {
+    const name = dartName(k);
+    if (typeof v === 'number') continue; // BabelSize carries these
+    if (v && typeof v === 'object') continue; // responsive, below
+    const single = rung(v);
+    if (single) {
+      L.push(
+        k.startsWith('gap-')
+          ? `  static const double ${name} = ${single};`
+          : `  static const EdgeInsets ${name} = EdgeInsets.all(${single});`,
+      );
+      continue;
+    }
+    const parts = String(v).trim().split(/\s+/).map(rung);
+    if (parts.length === 2 && parts.every(Boolean)) {
+      L.push(
+        `  static const EdgeInsets ${name} = EdgeInsets.symmetric(` +
+          `vertical: ${parts[0]}, horizontal: ${parts[1]});`,
+      );
+      continue;
+    }
+    L.push(`  // ${k}: ${v} — no Dart equivalent; see the note above.`);
+  }
+  for (const [k, v] of Object.entries(tokens.spaceRole)) {
+    if (!v || typeof v !== 'object') continue;
+    const name = dartName(k);
+    const steps = [];
+    for (const [bp, val] of Object.entries(v)) {
+      const r = rung(val);
+      if (!r) throw new Error(`spaceRole.${k}.${bp} is not a single {space.N}`);
+      if (bp === 'base') {
+        L.push(`  static const double ${name}Base = ${r};`);
+      } else {
+        const min = tokens.breakpoint[bp];
+        if (min === undefined) throw new Error(`Unknown breakpoint {${bp}} on spaceRole.${k}`);
+        const step = `${name}At${bp[0].toUpperCase()}${bp.slice(1)}`;
+        L.push(`  static const double ${step} = ${r};`);
+        steps.push({ min, ref: step });
+      }
+    }
+    steps.sort((a, b) => b.min - a.min);
+    L.push('');
+    L.push(`  /// [${name}] for a viewport [width], mirroring the CSS media`);
+    L.push('  /// steps exactly. Not a constant: the value depends on a width');
+    L.push('  /// only known at layout time.');
+    L.push(`  static double ${name}For(double width) =>`);
+    for (const st of steps) L.push(`      width >= ${st.min} ? ${st.ref} :`);
+    L.push(`      ${name}Base;`);
+  }
   L.push('}');
   return L.join('\n');
 }
@@ -320,6 +407,8 @@ ${Object.entries(tokens.space).map(([k, v]) => `  static const double s${dartNam
 ${dartGaps()}
 
 ${dartInsets()}
+
+${dartRoles()}
 
 /// Control sizes. One height for every full-size form control, so labels and
 /// fields line up by construction instead of each caller nudging its own.

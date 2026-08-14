@@ -229,7 +229,34 @@ abstract final class BabelInsets {
   static const EdgeInsets v32 = EdgeInsets.symmetric(vertical: BabelSpace.s_32);
   static const EdgeInsets vpx = EdgeInsets.symmetric(vertical: BabelSpace.spx);
   static const EdgeInsets v05 = EdgeInsets.symmetric(vertical: BabelSpace.s_05);
-  static const EdgeInsets card = EdgeInsets.all(BabelSpace.s_4);
+}
+
+/// Spacing ROLES — which number a given JOB uses, as opposed to
+/// [BabelSpace], which says which numbers are legal at all.
+///
+/// Spend these when the job has a name: a card inset is
+/// [BabelRole.padCard], not `BabelInsets.a6`. The rung is an
+/// implementation detail of the role and may move; the job does not.
+abstract final class BabelRole {
+  static const double gapPage = BabelSpace.s_6;
+  static const double gapSection = BabelSpace.s_4;
+  static const double gapInline = BabelSpace.s_2;
+  static const EdgeInsets padCard = EdgeInsets.all(BabelSpace.s_6);
+  static const EdgeInsets padControl = EdgeInsets.symmetric(vertical: BabelSpace.s_2, horizontal: BabelSpace.s_3);
+  static const EdgeInsets padCell = EdgeInsets.symmetric(vertical: BabelSpace.s_3, horizontal: BabelSpace.s_4);
+  static const EdgeInsets padPill = EdgeInsets.symmetric(vertical: BabelSpace.s_05, horizontal: BabelSpace.s_2);
+  // measure-prose: 60ch — no Dart equivalent; see the note above.
+  static const double padPageBase = BabelSpace.s_4;
+  static const double padPageAtMd = BabelSpace.s_6;
+  static const double padPageAt2xl = BabelSpace.s_8;
+
+  /// [padPage] for a viewport [width], mirroring the CSS media
+  /// steps exactly. Not a constant: the value depends on a width
+  /// only known at layout time.
+  static double padPageFor(double width) =>
+      width >= 1440 ? padPageAt2xl :
+      width >= 768 ? padPageAtMd :
+      padPageBase;
 }
 
 /// Control sizes. One height for every full-size form control, so labels and
