@@ -109,7 +109,15 @@ The ladder alone did not produce consistency. Admin shipped four page roots with
 
 Roles are emitted **as references** — `--gap-page: var(--space-6)`, never a flattened `24px`. Flattening severs the chain: DevTools would show a number with no hint of which role produced it, and a ladder change would stop propagating.
 
-Dart gets the same roles as `BabelSize.controlH`, plus `BabelGap` (`h4`, `w2`, …) and `BabelInsets` (`a4`, `h6`, `v2`, …) so a widget tree never has to hand-build a `SizedBox` or `EdgeInsets`.
+Dart gets the same roles as **`BabelRole`** — `padCard`, `gapPage`, `padCell`, … — generated from the same `spaceRole` block, plus `BabelGap` (`h4`, `w2`, …) and `BabelInsets` (`a4`, `h6`, `v2`, …) so a widget tree never has to hand-build a `SizedBox` or `EdgeInsets`.
+
+Three roles do not cross to Dart, and are skipped rather than approximated:
+
+- **`--measure-prose`** is `60ch`. `ch` is font-relative and has no Dart equivalent; a pixel guess would be a different token wearing this one's name.
+- **`--control-h`** is a plain number and already ships as `BabelSize.controlH`. Emitting it twice would let the two copies disagree.
+- **`--pad-page`** is responsive, and a Dart `const` cannot depend on a width known only at layout time. Its steps ship as `BabelRole.padPageBase` / `padPageAtMd` / `padPageAt2xl` plus `padPageFor(width)`, so the breakpoints stay in the token source instead of being re-typed per app.
+
+> Until v0.4.0 the Dart side carried a single hand-written `BabelInsets.card = all({space.4})` — **16**, while `--pad-card` resolved to **24**. One role name, two numbers, in the package whose purpose is one vocabulary. Nothing consumed the Dart constant, so the divergence was invisible and free to correct; generating the roles is what stops it recurring.
 
 ### 4.3 The four rhythm rules
 
