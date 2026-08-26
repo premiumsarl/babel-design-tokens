@@ -275,6 +275,53 @@ abstract final class BabelRadius {
   static const double full = 9999.0;
 }
 
+/// Animation durations. One ladder for every transition in the app.
+abstract final class BabelDuration {
+  static const Duration instant = Duration(milliseconds: 100);
+  static const Duration fast = Duration(milliseconds: 150);
+  static const Duration normal = Duration(milliseconds: 200);
+  static const Duration moderate = Duration(milliseconds: 250);
+  static const Duration slow = Duration(milliseconds: 300);
+  static const Duration slower = Duration(milliseconds: 400);
+  static const Duration slowest = Duration(milliseconds: 500);
+  static const Duration ambient = Duration(milliseconds: 1500);
+}
+
+/// Easing curves, as exact `Cubic`s rather than the nearest named
+/// `Curves.*` constant — so a sheet opens on the IDENTICAL curve here and
+/// on the web, instead of a visually-close approximation.
+abstract final class BabelEasing {
+  static const Curve standard = Cubic(0.40, 0.00, 0.20, 1.00);
+  static const Curve enter = Cubic(0.00, 0.00, 0.20, 1.00);
+  static const Curve exit = Cubic(0.40, 0.00, 1.00, 1.00);
+  static const Curve spring = Cubic(0.34, 1.56, 0.64, 1.00);
+  static const Curve linear = Curves.linear;
+}
+
+/// A duration + curve pair.
+///
+/// Roles exist so a call site names the JOB ("this is a hover") rather than
+/// picking a number, which is what let 18 durations and 7 curves accumulate.
+final class BabelMotionRole {
+  final Duration duration;
+  final Curve curve;
+  const BabelMotionRole(this.duration, this.curve);
+}
+
+/// Motion roles — which duration/curve pair a given job uses.
+///
+/// Usage: `AnimatedContainer(duration: BabelMotion.hover.duration,
+/// curve: BabelMotion.hover.curve, ...)`.
+abstract final class BabelMotion {
+  static const BabelMotionRole hover = BabelMotionRole(BabelDuration.fast, BabelEasing.standard);
+  static const BabelMotionRole control = BabelMotionRole(BabelDuration.normal, BabelEasing.standard);
+  static const BabelMotionRole overlay = BabelMotionRole(BabelDuration.moderate, BabelEasing.enter);
+  static const BabelMotionRole dismiss = BabelMotionRole(BabelDuration.fast, BabelEasing.exit);
+  static const BabelMotionRole page = BabelMotionRole(BabelDuration.slow, BabelEasing.standard);
+  static const BabelMotionRole emphasis = BabelMotionRole(BabelDuration.slower, BabelEasing.spring);
+  static const BabelMotionRole loop = BabelMotionRole(BabelDuration.ambient, BabelEasing.linear);
+}
+
 /// Type scale (logical px) + families.
 abstract final class BabelType {
   static const String display = 'Space Grotesk';

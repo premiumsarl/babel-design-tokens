@@ -74,7 +74,7 @@ const walkFlat = (obj, prefix) => {
   }
 };
 ['color', 'semantic', 'font', 'space', 'spaceRole', 'radius', 'shadow', 'z',
- 'breakpoint'].forEach(
+ 'breakpoint', 'duration', 'easing', 'motionRole'].forEach(
   (g) => walkFlat(tokens[g], g),
 );
 
@@ -110,6 +110,60 @@ const roleValue = (v) => {
     /\{space\.([^}]+)\}/g,
     (_, k) => `var(${cssVarName(k)})`,
   );
+};
+
+/* ---------- motion emit helpers ---------- */
+
+/**
+ * Motion roles are emitted AS REFERENCES, for the same reason spacing roles
+ * are (see $meta.roleSyntax): a role's job is to say WHICH rung a given job
+ * uses. `--motion-hover: var(--duration-fast) var(--easing-standard)` keeps
+ * that chain visible in DevTools and keeps a ladder change propagating;
+ * flattening it to `150ms cubic-bezier(...)` would sever both.
+ *
+ * The pair is emitted in `transition` shorthand order (duration then
+ * timing-function) so a caller can write the whole thing in one go:
+ *
+ *   transition: background-color var(--motion-hover);
+ */
+const motionRoleRef = (name, role) => {
+  const pick = (field, group) => {
+    const raw = role?.[field];
+    const m = typeof raw === 'string' && raw.match(new RegExp(`^\\{${group}\\.([^}]+)\\}$`));
+    if (!m) {
+      throw new Error(
+        `motionRole.${name}.${field} must be a {${group}.*} alias, got ${JSON.stringify(raw)}. `
+        + `Roles are emitted as references, so a literal here would sever the chain.`,
+      );
+    }
+    if (tokens[group][m[1]] === undefined) {
+      throw new Error(`motionRole.${name}.${field} points at {${group}.${m[1]}}, which does not exist.`);
+    }
+    return m[1];
+  };
+  return { duration: pick('duration', 'duration'), easing: pick('easing', 'easing') };
+};
+
+const motionRoleValue = (name, role) => {
+  const { duration, easing } = motionRoleRef(name, role);
+  return `var(--duration-${duration}) var(--easing-${easing})`;
+};
+
+/**
+ * A CSS cubic-bezier() as a Dart curve.
+ *
+ * Emitted as an explicit `Cubic(...)` rather than the nearest named
+ * `Curves.*` constant, so web and Flutter animate on the IDENTICAL curve
+ * instead of a visually-close approximation. (`Curves.easeInOut` is
+ * Cubic(0.42, 0, 0.58, 1) — near the Material standard curve, not equal to
+ * it. That gap is exactly the drift this token set exists to remove.)
+ * `linear` has no bezier spelling and maps to the built-in.
+ */
+const dartCurve = (css) => {
+  if (css === 'linear') return 'Curves.linear';
+  const m = css.match(/^cubic-bezier\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)$/);
+  if (!m) throw new Error(`easing value is neither linear nor cubic-bezier(): ${css}`);
+  return `Cubic(${m.slice(1).map((n) => Number(n).toFixed(2)).join(', ')})`;
 };
 
 /* ---------- CSS ---------- */
@@ -149,6 +203,14 @@ function cssBlock(indent = '  ') {
   }
   for (const [k, v] of Object.entries(tokens.radius))
     L.push(`${indent}--radius-${k}: ${v === 9999 ? '9999px' : v + 'px'};`);
+  // motion — the ladder: which durations and curves are legal
+  for (const [k, v] of Object.entries(tokens.duration))
+    L.push(`${indent}--duration-${k}: ${v}ms;`);
+  for (const [k, v] of Object.entries(tokens.easing))
+    L.push(`${indent}--easing-${k}: ${v};`);
+  // motionRole — which pair a given job uses, as references (see motionRoleValue)
+  for (const [k, v] of Object.entries(tokens.motionRole))
+    L.push(`${indent}--motion-${k}: ${motionRoleValue(k, v)};`);
   for (const [k, v] of Object.entries(tokens.z))
     L.push(`${indent}--z-${k}: ${v};`);
   return L.join('\n');
@@ -385,6 +447,53 @@ function dartRoles() {
   return L.join('\n');
 }
 
+function dartDurations() {
+  const L = ['/// Animation durations. One ladder for every transition in the app.',
+             'abstract final class BabelDuration {'];
+  for (const [k, v] of Object.entries(tokens.duration))
+    L.push(`  static const Duration ${dartName(k)} = Duration(milliseconds: ${v});`);
+  L.push('}');
+  return L.join('\n');
+}
+
+function dartEasings() {
+  const L = ['/// Easing curves, as exact `Cubic`s rather than the nearest named',
+             '/// `Curves.*` constant — so a sheet opens on the IDENTICAL curve here and',
+             '/// on the web, instead of a visually-close approximation.',
+             'abstract final class BabelEasing {'];
+  for (const [k, v] of Object.entries(tokens.easing))
+    L.push(`  static const Curve ${dartName(k)} = ${dartCurve(v)};`);
+  L.push('}');
+  return L.join('\n');
+}
+
+function dartMotionRoles() {
+  const L = [
+    '/// A duration + curve pair.',
+    '///',
+    '/// Roles exist so a call site names the JOB ("this is a hover") rather than',
+    '/// picking a number, which is what let 18 durations and 7 curves accumulate.',
+    'final class BabelMotionRole {',
+    '  final Duration duration;',
+    '  final Curve curve;',
+    '  const BabelMotionRole(this.duration, this.curve);',
+    '}',
+    '',
+    '/// Motion roles — which duration/curve pair a given job uses.',
+    '///',
+    '/// Usage: `AnimatedContainer(duration: BabelMotion.hover.duration,',
+    '/// curve: BabelMotion.hover.curve, ...)`.',
+    'abstract final class BabelMotion {',
+  ];
+  for (const [k, v] of Object.entries(tokens.motionRole)) {
+    const { duration, easing } = motionRoleRef(k, v);
+    L.push(`  static const BabelMotionRole ${dartName(k)} = `
+      + `BabelMotionRole(BabelDuration.${dartName(duration)}, BabelEasing.${dartName(easing)});`);
+  }
+  L.push('}');
+  return L.join('\n');
+}
+
 const dart = `// Babel Design Tokens — GENERATED from tokens.json. Do not edit.
 // Brand: black core + bronze accent (#B08D57). Consumed by mobile via the
 // babel_design_tokens pub package (import 'package:babel_design_tokens/babel_tokens.dart').
@@ -423,6 +532,12 @@ ${Object.entries(tokens.spaceRole)
 abstract final class BabelRadius {
 ${Object.entries(tokens.radius).map(([k, v]) => `  static const double ${dartName(k).replace(/^_/, 'r')} = ${Number(v).toFixed(1)};`).join('\n')}
 }
+
+${dartDurations()}
+
+${dartEasings()}
+
+${dartMotionRoles()}
 
 /// Type scale (logical px) + families.
 abstract final class BabelType {
