@@ -134,9 +134,10 @@
   --motion-loop: var(--duration-ambient) var(--easing-linear);
   --z-dropdown: 100;
   --z-sticky: 200;
-  --z-overlay: 900;
-  --z-modal: 1000;
-  --z-toast: 1100;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-chatbot: 600;
 
   /* semantic values (light) — plain, no theme switching */
   --color-core: #14110c;

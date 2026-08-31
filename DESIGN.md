@@ -136,7 +136,19 @@ Three roles do not cross to Dart, and are skipped rather than approximated:
 
 - **Radius**: `sm 6 · md 9 · lg 12 · xl 16 · 2xl 22 · full`. One card radius (`lg = 12`) — retires the 12‑vs‑15 disagreement.
 - **Shadow**: `sm · md · lg`, warm‑tinted in light, black in dark. Retires the 3 conflicting mobile shadow tokens.
-- **Z**: `dropdown 100 · sticky 200 · overlay 900 · modal 1000 · toast 1100`.
+- **Z**: `dropdown 100 · sticky 200 · overlay 300 · modal 400 · toast 500 · chatbot 600`.
+  One rung per stacking job, 100 apart. **The gap is load-bearing**: a caller that cannot
+  spend a `var()` — React's `zIndex` prop takes a number — has to land a literal *between*
+  two rungs, and the admin panel does exactly that (`zIndex: 410`, "above `--z-modal`,
+  below `--z-toast`"). `build.mjs` enforces both the ascending order and the 100 minimum.
+
+  These were **corrected in v0.6.0** from `overlay 900 · modal 1000 · toast 1100`, which
+  shipped in v0.1.0 and which **nothing ever rendered**: the admin panel — the only
+  consumer of this scale — redefined all of them locally *after* the `@import`, so
+  later-wins meant its own `300/400/500` were what painted. Raising admin to the old
+  token numbers would have restacked live UI, because four raw `z-index: 1000` literals
+  and the `410` above sit at fixed heights relative to the LOCAL scale. So the tokens
+  moved to the values that were actually on screen, not the reverse.
 
 ---
 

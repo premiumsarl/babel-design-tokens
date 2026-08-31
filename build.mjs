@@ -112,6 +112,42 @@ const roleValue = (v) => {
   );
 };
 
+/* ---------- z-scale invariant ---------- */
+
+/**
+ * The z rungs must be strictly ascending in declaration order, with a gap
+ * big enough to slip a literal between two of them.
+ *
+ * Not decoration. Consumers DO reach between the rungs: the admin panel's
+ * address-autocomplete portal carries a literal `zIndex: 410` with a comment
+ * reading "Above --z-modal (400) ... Still below --z-toast (500)" — because
+ * React's zIndex type takes numbers, not a var(). A rung silently reordered
+ * here, or two rungs closed up, breaks that call site with nothing failing in
+ * this repo. The gap is what makes such an escape hatch legal at all.
+ */
+const Z_MIN_GAP = 100;
+{
+  const rungs = Object.entries(tokens.z);
+  for (let i = 1; i < rungs.length; i++) {
+    const [prevName, prev] = rungs[i - 1];
+    const [name, val] = rungs[i];
+    if (!(val > prev)) {
+      throw new Error(
+        `z.${name} (${val}) must be greater than z.${prevName} (${prev}). `
+        + `The z group is ordered by declaration; a rung out of order changes `
+        + `stacking everywhere without anything else failing.`,
+      );
+    }
+    if (val - prev < Z_MIN_GAP) {
+      throw new Error(
+        `z.${name} (${val}) is only ${val - prev} above z.${prevName} (${prev}); `
+        + `keep at least ${Z_MIN_GAP} so a caller that cannot use a var() can `
+        + `still land a literal between two rungs.`,
+      );
+    }
+  }
+}
+
 /* ---------- motion emit helpers ---------- */
 
 /**
