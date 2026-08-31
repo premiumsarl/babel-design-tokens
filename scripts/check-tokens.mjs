@@ -27,7 +27,41 @@ if (!dir) {
   process.exit(2);
 }
 const exts = (extArg ? extArg.slice(6) : '.css,.scss,.ts,.tsx,.js,.dart').split(',');
-const SKIP = new Set(['node_modules', '.next', 'dist', 'build', '.git', '.dart_tool', 'coverage']);
+const SKIP = new Set([
+  'node_modules', '.next', 'dist', 'build', '.git', '.dart_tool', 'coverage',
+  // Test trees. See isTestFile below for why.
+  '__tests__', 'test', 'tests',
+]);
+
+/**
+ * Test files are not styling decisions, and counting them produces false
+ * positives that fail CI for every branch off the default branch.
+ *
+ * Two distinct ways it happens. A test may assert on a string that merely
+ * LOOKS like a colour — babel-admin-panel's
+ * `expect(displayPersonLabel({ id: '183' })).toBe('Pat Dubois (#183)')`
+ * matched /#[0-9a-fA-F]{3}\b/ and took that repo to 499 against a baseline
+ * of 498, reddening the guardrails workflow for EVERY PR branched off
+ * develop until someone went looking. And a test ABOUT colours necessarily
+ * CONTAINS colours: that repo's no-hand-rolled-axis-money and spacing-guard
+ * both carry literals as fixtures, so the ratchet was counting its own
+ * siblings' evidence as drift.
+ *
+ * Any digit 0-9 is a hex digit, so every id of 3, 6 or 8 digits printed
+ * after a `#` trips this. Scoping the scan is the only fix that does not
+ * recur; editing the offending test just moves the trap.
+ *
+ * The extensions cover every consumer this script serves, including Dart's
+ * `foo_test.dart` convention — `.dart` is in the default ext list above, so
+ * a JS-only pattern would have made this silently inert for exactly the
+ * consumer the canonical copy exists to serve.
+ *
+ * NOTE: `scripts/` is deliberately outside this package's `files`, so
+ * consumers hold COPIES rather than importing this. Re-vendor them when
+ * this changes, and preserve each consumer's own SKIP entries
+ * (babel-website adds `.vite` and `babel-website`).
+ */
+const isTestFile = (p) => /(?:\.|_)(?:test|spec)\.(?:[jt]sx?|[mc]js|dart)$/.test(p);
 
 // Raw hex (#rrggbb / #rgb), Dart ARGB (0xFFrrggbb), and literal rgb()/rgba().
 const PATTERNS = [
@@ -43,7 +77,7 @@ function walk(d, acc = []) {
     const p = join(d, entry);
     const s = statSync(p);
     if (s.isDirectory()) walk(p, acc);
-    else if (exts.includes(extname(p))) acc.push(p);
+    else if (exts.includes(extname(p)) && !isTestFile(p)) acc.push(p);
   }
   return acc;
 }
@@ -68,7 +102,14 @@ const baseline = existsSync(baselineFile)
   : Infinity;
 
 if (update) {
-  writeFileSync(baselineFile, JSON.stringify({ count }, null, 2) + '\n');
+  /* Preserve every other key. The baselines carry a `$comment` recording
+   * each measured move and why — the entire audit trail for a number that
+   * may only go down — and rewriting the file as `{count}` alone silently
+   * deleted it. */
+  const prev = existsSync(baselineFile)
+    ? JSON.parse(readFileSync(baselineFile, 'utf8'))
+    : {};
+  writeFileSync(baselineFile, JSON.stringify({ ...prev, count }, null, 2) + '\n');
   console.log(`baseline set: ${count} raw color literals in ${dir}`);
   process.exit(0);
 }
