@@ -140,7 +140,81 @@ Three roles do not cross to Dart, and are skipped rather than approximated:
 
 ---
 
-## 6 · Consuming the tokens
+## 6 · Motion — a ladder and a set of roles
+
+Same shape as spacing (§4), for the same reason: a **ladder** says which timings are
+legal, **roles** say which timing a given job uses.
+
+### 6.1 The ladder
+
+| Token | ms | |
+|---|---|---|
+| `instant` | 100 | micro-feedback — a checkmark, a tick |
+| `fast` | 150 | hover, colour and border change |
+| `normal` | 200 | a control changing state |
+| `moderate` | 250 | a dropdown or sheet opening |
+| `slow` | 300 | a route or panel transition |
+| `slower` | 400 | large or complex movement |
+| `slowest` | 500 | the ceiling for anything a user waits on |
+| `ambient` | 1500 | looping, non-blocking — skeletons, pulses, shimmer |
+
+### 6.2 The easings
+
+| Token | Curve | Use |
+|---|---|---|
+| `standard` | `cubic-bezier(0.4, 0, 0.2, 1)` | the default — anything moving within the screen |
+| `enter` | `cubic-bezier(0, 0, 0.2, 1)` | something appearing (decelerates in) |
+| `exit` | `cubic-bezier(0.4, 0, 1, 1)` | something leaving (accelerates out) |
+| `spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | deliberate overshoot; emphasis only |
+| `linear` | `linear` | loops only — a spinner must not ease |
+
+Flutter gets these as **exact `Cubic`s**, not the nearest named `Curves.*` constant. That
+matters more than it sounds: `Curves.easeInOut` is `Cubic(0.42, 0, 0.58, 1)` — *near* the
+standard curve, not equal to it. Emitting the identical bezier is what makes a sheet open
+the same way in admin and on mobile instead of merely similarly.
+
+### 6.3 The roles
+
+| Role | Duration | Easing | Job |
+|---|---|---|---|
+| `hover` | fast 150 | standard | hover / focus / colour feedback |
+| `control` | normal 200 | standard | toggle, checkbox, segmented control |
+| `overlay` | moderate 250 | enter | dropdown, popover, sheet, modal opening |
+| `dismiss` | fast 150 | exit | the same things closing |
+| `page` | slow 300 | standard | route and panel transitions |
+| `emphasis` | slower 400 | spring | deliberate attention — only where it is earned |
+| `loop` | ambient 1500 | linear | skeletons, shimmer, pulse |
+
+Open and close are **deliberately asymmetric** — 250ms decelerating in, 150ms accelerating
+out. Dismissal should feel quicker than arrival; symmetric timing is the most common way a
+UI reads as sluggish.
+
+### 6.4 What this retires
+
+Motion was the last unguarded scale, and it had drifted exactly the way colour had before
+§2 collapsed it. Measured on 2026-08-25:
+
+| Surface | Durations | Easings |
+|---|---|---|
+| `babel-admin-panel/src` CSS | **23 distinct** raw values (65 raw `transition` occurrences alone: `150ms` ×32, `200ms` ×11, `120ms` ×9, `300`, `400`, `600`, `1000`…) | bare `ease` ×208, `linear` ×30, plus **5 distinct** `cubic-bezier()` |
+| `babel-mobile/lib` | **18 distinct** `Duration(milliseconds:)` | **7 distinct** `Curves.*` |
+
+`150ms` and `0.15s` appeared in the same stylesheet — the same failure as "the Babel brand
+colour resolved to five different hexes", one axis over.
+
+Admin already had a private `--duration-fast/normal/slow` + `--ease-default/in/out/spring`
+block in `globals.css`, and it was **well adopted** (142 `var(--duration-*)` and 122
+`var(--ease-*)` uses). It was never a bad vocabulary — it was an *unshared* one: mobile
+could not reach it, nothing versioned it, and `--duration-slow: 350ms` had drifted to zero
+uses while `300ms` and `400ms` accumulated raw. Promoting it here is what makes it real.
+
+**Display durations are not motion.** A snackbar showing for 3s, a debounce, a network
+timeout — none of these are animation, none of them belong on this ladder, and the guards
+below deliberately do not count them.
+
+---
+
+## 7 · Consuming the tokens
 
 The pipeline: **`tokens.json` → `build.mjs` →** `dist/{tokens.css, tokens.values.css, tokens.flat.json}` (web, via npm) **and** `dart/lib/babel_tokens.dart` (Flutter, via the `dart/` pub package). One source, delivered through each ecosystem's own package manager — see [README.md](./README.md) for install snippets.
 
@@ -154,7 +228,7 @@ Same token names, three renderings — so a change to `tokens.json` reaches all 
 
 ---
 
-## 7 · Governance — the ratchet
+## 8 · Governance — the ratchet
 
 `scripts/check-tokens.mjs <dir>` counts raw color literals (hex, `0xFF…`, `rgb/rgba`) that bypass the tokens and fails CI when the count rises above a per‑repo **baseline**. You don't fix every legacy literal on day one — you snapshot the current count (`--update-baseline`) and it can only go **down**. Today's baselines from this repo's own scan:
 
@@ -170,7 +244,7 @@ A second guard, `scripts/check-contrast.mjs` (`npm run check:contrast`), verifie
 
 ---
 
-## 8 · Migration plan (incremental, non‑breaking)
+## 9 · Migration plan (incremental, non‑breaking)
 
 0. **Land the package** (this repo) — done. Publish as `@premiumsarl/babel-design-tokens` or consume via path/git.
 1. **Wire `dist/` in** each repo (import CSS / vendor Dart) and **set baselines**. No visual change yet — tokens sit alongside the old values.
@@ -181,11 +255,13 @@ A second guard, `scripts/check-contrast.mjs` (`npm run check:contrast`), verifie
 
 ---
 
-## 9 · Rules of thumb
+## 10 · Rules of thumb
 
 - **Never** write a raw hex, `0xFF…`, or `rgb()` in a component. Use a token.
 - **Brand text / buttons / links → `accent-strong`**, not `accent`. `accent` (500) is decorative only.
 - **Status → the semantic role** (`success` / `warning` / `error` / `info`), never a raw green/red.
 - **Charts → `chart-1…8` in order.** No per‑chart palettes.
 - **Primary action → `core`.** It's near‑black in light and near‑white in dark automatically.
+- **Motion → a role** (`--motion-overlay`, `BabelMotion.overlay`), never a raw `150ms` or `Curves.easeInOut`.
+- **A spinner or skeleton uses `loop`.** Anything that repeats forever eases `linear` — never `standard`.
 - Changing a brand value is a **one‑line edit to `tokens.json`** + `npm run build`. If you're editing `dist/`, stop.

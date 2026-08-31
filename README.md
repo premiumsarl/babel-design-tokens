@@ -52,6 +52,8 @@ Install (a git dependency needs no registry; pin a tag):
 /* Admin — theme-adaptive (drives light/dark off :root[data-theme]) */
 @import "@premiumsarl/babel-design-tokens/tokens.css";
 .button-primary { background: var(--color-core); color: var(--color-on-core); }
+/* Motion — a role is the whole shorthand tail (duration + timing-function) */
+.dropdown { transition: opacity var(--motion-overlay), transform var(--motion-overlay); }
 
 /* Website — flat VALUES only. Import tokens.values.css, NOT tokens.css: the
    theme-adaptive file's @media/[data-theme] dark rules would override a
@@ -72,6 +74,13 @@ dependencies:
 ```dart
 import 'package:babel_design_tokens/babel_tokens.dart';
 BabelColors.brand500;  BabelColorsLight.accentStrong;  BabelSpace.s4;  BabelType.body;
+
+// Motion — a role, never a raw Duration/Curve:
+AnimatedContainer(
+  duration: BabelMotion.overlay.duration,
+  curve: BabelMotion.overlay.curve,
+  ...
+);
 ```
 
 ---
