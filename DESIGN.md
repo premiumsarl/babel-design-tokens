@@ -16,7 +16,7 @@ Brand in one line: **black / charcoal core, bronze accent.** The core carries pr
 | Canonical brand | **`#B08D57`** (brand‑500) | The logo fill — the brand mark is the source of truth. |
 | Primary action | **Core** (near‑black `#14110c` light → near‑white `#f4f1ea` dark) | Neutral, not a hue. Black buttons in light; they invert on dark. |
 | Brand accent | **Bronze** | `accent` = brand‑500 (decorative/large); `accent-strong` = brand‑700 `#7c6139` for anything that must pass contrast — buttons, links, accent text, focus. |
-| Retired | indigo `#6366f1`, the slate/Tailwind palette, the 5 divergent bronzes, 8 greens / 6 reds / 4 golds | Collapsed into the ramps + semantic roles below. |
+| Superseded | indigo `#6366f1`, the slate/Tailwind palette, the 5 divergent bronzes, 8 greens / 6 reds / 4 golds | Replaced by the ramps + semantic roles below. **Superseded, not yet gone** — the admin panel still renders Tailwind's status shades over the package's; see the adoption note in §2. |
 
 The bronze is deliberately split: **`accent` (500)** is the brand hue for fills and dark‑mode surfaces; **`accent-strong` (700)** is the *working* bronze. Never set body text or a white‑text button on `accent` — it's ~3:1. Use `accent-strong`, which is verified ≥4.5:1 for text and buttons in both themes (`scripts/check-contrast.mjs`).
 
@@ -59,7 +59,16 @@ The bronze is deliberately split: **`accent` (500)** is the brand hue for fills 
 | error | `#ff5050` | `#dc2626` | `#c62828` | `#ff9a8f` |
 | info | `#3b82f6` | `#2f6fe0` | `#1d63d1` | `#6fb0ff` |
 
-`success #32BA7C`, `warning #FFA800`, `error #FF5050`, `info #3b82f6` were already the agreed values in admin *and* mobile — this just makes them the **only** ones. All status pills, badges, and calendar dots read from these; nothing hardcodes a hex.
+`success #32BA7C`, `warning #FFA800`, `error #FF5050`, `info #3b82f6` were already the agreed values in admin *and* mobile, and they still agree — those four **500** rungs are identical in the package and in every consumer.
+
+> **Adoption is partial, and this section used to overstate it.** It read "this just makes them the **only** ones … nothing hardcodes a hex." Neither half was true, and saying so hid real drift for months. Measured **2026-08-31** against v0.6.0:
+>
+> - **Mobile — reconciled.** 20 files read `BabelColorsLight/Dark.{success,warning,error,info}`. No raw status hex in `lib/`.
+> - **Admin — not reconciled.** `globals.css` declares **27** of these names itself and **22 diverge**. The 500s match; what diverges is everything around them — the `50/100/400/600/700` rungs and the `solid`/`bg`/`text` roles, still carrying Tailwind's shades (`#fef2f2`, `#d1fae5`, `#dbeafe`, `#fef3c7`) and one-off greens and reds (`#279B0C` vs `#1f9e66`, `#3A683B` vs `#0f7a4d`, `#BB2F48` vs `#c62828`). Because those declarations sit **after** the `@import`, the local values are the ones that render — the package's are dead. See §8.
+> - **Website —** defines no status colours at all, and is still pinned to **v0.2.0**.
+> - **"Nothing hardcodes a hex" was never true.** Admin alone carries **490** raw colour literals today. That is exactly why the ratchet in §8 exists; a doc claiming zero is a doc arguing the ratchet is unnecessary.
+>
+> Closing the 22 is a **design decision per value** — which green is the success green? — not a rename, so it is not a sweep anyone should do unasked. They are held at a baseline by `check-motion.mjs` check 3 in the admin panel, so the number can only go down.
 
 ### Charts (categorical — kills the ad‑hoc rainbows)
 `chart‑1` brand‑500 · `chart‑2` info · `chart‑3` success · `chart‑4` warning · `chart‑5 #8b5cf6` · `chart‑6 #ef4444` · `chart‑7 #14b8a6` · `chart‑8 #ec4899`. Data‑viz cycles this order; no chart file defines its own palette.
@@ -274,6 +283,12 @@ A second guard, `scripts/check-contrast.mjs` (`npm run check:contrast`), verifie
 - **Status → the semantic role** (`success` / `warning` / `error` / `info`), never a raw green/red.
 - **Charts → `chart-1…8` in order.** No per‑chart palettes.
 - **Primary action → `core`.** It's near‑black in light and near‑white in dark automatically.
+- 🔴 **Never redeclare a name this package owns.** A consumer's `--color-success-600:` or
+  `--z-modal:` does not duplicate the token, it **shadows** it — the consumer's block sits after
+  the `@import`, so the local value renders and the package's is dead. Both values are legal in
+  their own scale, so no value-level lint goes red. It has happened three times: the whole z
+  scale (dead since v0.1.0), `--duration-normal`, and 22 status colours. If the rendered value
+  is the right one, **fix the token** — don't fork it locally.
 - **Motion → a role** (`--motion-overlay`, `BabelMotion.overlay`), never a raw `150ms` or `Curves.easeInOut`.
 - **A spinner or skeleton uses `loop`.** Anything that repeats forever eases `linear` — never `standard`.
 - Changing a brand value is a **one‑line edit to `tokens.json`** + `npm run build`. If you're editing `dist/`, stop.
