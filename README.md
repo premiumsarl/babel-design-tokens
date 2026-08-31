@@ -243,7 +243,8 @@ deliberately still in place in all three repos today. When you migrate one:
 npm run build                       # regenerate all outputs from tokens.json + contracts/
 npm run build:check                 # compare the committed output instead of writing
 npm run check -- ./path/to/src      # count raw color literals vs a baseline
-npm run verify                      # build + contrast gate + contract gate
+npm run check:ratchet               # the ratchet's own scope test (fixtures)
+npm run verify                      # build + contrast + contracts + ratchet
 ```
 
 1. Edit `tokens.json` (alias with `{color.brand.500}`) and/or `contracts/*.json`.
@@ -251,6 +252,35 @@ npm run verify                      # build + contrast gate + contract gate
 3. `npm run verify` — WCAG contrast plus the contract invariants.
 4. Bump `version` in **both** `package.json` and `dart/pubspec.yaml` (keep them equal).
 5. Commit the sources, `dist/`, and `dart/lib/`, then tag `vX.Y.Z` so npm and pub consumers pin the same release.
+
+### Vendored scripts
+
+`scripts/` is deliberately **outside** `package.json`'s `files`, so consumers
+do not import these — they hold **copies**:
+
+| Consumer | Copy | Baseline |
+| --- | --- | --- |
+| babel-admin-panel | `scripts/check-tokens.mjs` | `src/.token-baseline.json` |
+| babel-website | `scripts/check-tokens.mjs` | `.token-baseline.json` |
+
+babel-mobile does **not** vendor this script; its equivalent is
+`test/design/color_drift_test.dart`, which asserts **equality** rather than an
+upper bound, so it fails on a fall as well as a rise.
+
+Changing `check-tokens.mjs` therefore means:
+
+1. Land it **here** first, with `npm run check:ratchet` green.
+2. Copy it down, re-applying each consumer's own deltas. Every copy carries a
+   two-line `Vendored from …` header the canonical does not, and babel-website
+   adds `.vite` and `babel-website` to `SKIP`. **Re-vendor by patch, never by
+   `cp`.**
+3. Ship the script change and its baseline move in **one commit** per consumer —
+   split them and every branch in between goes red.
+
+A baseline may only go **down**, and each move must be MEASURED against real
+output rather than derived. Record the move in the baseline's `$comment`;
+`--update-baseline` preserves it, but writes only `count`, so add the prose by
+hand.
 
 > A contract change is a **wire** change: a consumer only sees it after step 5
 > and a pin bump on its side. Removing a value is therefore never safe in one

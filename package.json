@@ -27,7 +27,8 @@
     "check": "node scripts/check-tokens.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",
-    "verify": "node build.mjs && node scripts/check-contrast.mjs && node scripts/check-contracts.mjs",
+    "check:ratchet": "node scripts/__tests__/ratchet-scope.test.mjs",
+    "verify": "node build.mjs && node scripts/check-contrast.mjs && node scripts/check-contracts.mjs && node scripts/__tests__/ratchet-scope.test.mjs",
     "prepublishOnly": "node build.mjs && node scripts/check-contrast.mjs && node scripts/check-contracts.mjs"
   },
   "license": "UNLICENSED",

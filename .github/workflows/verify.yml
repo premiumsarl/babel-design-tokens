@@ -74,6 +74,13 @@ jobs:
             > /tmp/dartcheck/pubspec.yaml
           cd /tmp/dartcheck && dart pub get && dart analyze
 
+      # check-tokens.mjs is COPIED into every consumer rather than shipped
+      # (scripts/ is outside `files`), and until now nothing here exercised
+      # it — so a change to the ratchet was validated by nothing until it
+      # had already reddened a consumer's build.
+      - name: Ratchet scope (test files excluded, real literals still counted)
+        run: node scripts/__tests__/ratchet-scope.test.mjs
+
       - name: Version parity (package.json == dart/pubspec.yaml)
         run: |
           node -e '
