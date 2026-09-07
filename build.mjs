@@ -239,6 +239,11 @@ function cssBlock(indent = '  ') {
   }
   for (const [k, v] of Object.entries(tokens.radius))
     L.push(`${indent}--radius-${k}: ${v === 9999 ? '9999px' : v + 'px'};`);
+  /* Border widths. Small numbers, but shared ones: the accent rail is
+     the same 3px on the admin StatCard and the mobile verdict band, and
+     it was hard-coded in both until it lived here. */
+  for (const [k, v] of Object.entries(tokens.border))
+    L.push(`${indent}--border-${k}: ${v}px;`);
   // motion — the ladder: which durations and curves are legal
   for (const [k, v] of Object.entries(tokens.duration))
     L.push(`${indent}--duration-${k}: ${v}ms;`);
@@ -567,6 +572,11 @@ ${Object.entries(tokens.spaceRole)
 /// Corner radii (logical px).
 abstract final class BabelRadius {
 ${Object.entries(tokens.radius).map(([k, v]) => `  static const double ${dartName(k).replace(/^_/, 'r')} = ${Number(v).toFixed(1)};`).join('\n')}
+}
+
+/// Border widths shared across the products — see the border group in tokens.json.
+abstract final class BabelBorder {
+${Object.entries(tokens.border).map(([k, v]) => `  static const double ${dartName(k)} = ${Number(v).toFixed(1)};`).join('\n')}
 }
 
 ${dartDurations()}
