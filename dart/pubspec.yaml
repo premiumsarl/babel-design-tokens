@@ -5,7 +5,7 @@ description: >-
   black core + bronze accent (#B08D57), and the wire vocabulary shared with the
   API and admin panel. The Dart code in lib/ is generated from ../tokens.json
   and ../contracts/ by ../build.mjs; do not hand-edit it.
-version: 0.6.0
+version: 0.7.0
 
 # Private: consumed by the mobile app as a git dependency, never published to
 # pub.dev. `pub` still resolves it from a git url + ref (see README.md).
