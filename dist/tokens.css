@@ -111,6 +111,10 @@
   --radius-xl: 16px;
   --radius-2xl: 22px;
   --radius-full: 9999px;
+  --radius-pill: 40px;
+  --radius-sheet: 20px;
+  --border-hairline: 1px;
+  --border-accent-rail: 3px;
   --duration-instant: 100ms;
   --duration-fast: 150ms;
   --duration-normal: 200ms;

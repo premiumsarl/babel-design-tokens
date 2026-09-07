@@ -273,6 +273,14 @@ abstract final class BabelRadius {
   static const double xl = 16.0;
   static const double r2xl = 22.0;
   static const double full = 9999.0;
+  static const double pill = 40.0;
+  static const double sheet = 20.0;
+}
+
+/// Border widths shared across the products — see the border group in tokens.json.
+abstract final class BabelBorder {
+  static const double hairline = 1.0;
+  static const double accentRail = 3.0;
 }
 
 /// Animation durations. One ladder for every transition in the app.
