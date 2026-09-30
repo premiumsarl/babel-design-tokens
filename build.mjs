@@ -204,6 +204,45 @@ const dartCurve = (css) => {
   return `Cubic(${m.slice(1).map((n) => Number(n).toFixed(2)).join(', ')})`;
 };
 
+/* ---------- shadow emit helpers ---------- */
+
+/**
+ * A CSS box-shadow value as Dart `BoxShadow(...)` expressions, one per layer.
+ *
+ * Until v0.8.0 the shadow group was CSS-only, so mobile had no shadow token to
+ * spend and every card picked its own. Only the shape tokens.json uses is
+ * accepted — `x y blur [spread] rgba(r,g,b,a)` per layer, comma-separated —
+ * and anything else fails the build by name, as dartCurve does: a half-parsed
+ * shadow would be a different token wearing this one's name. `inset` has no
+ * BoxShadow equivalent and is refused for the same reason.
+ *
+ * Numbers cross verbatim (a 16px blur is `blurRadius: 16.0`), so the Dart
+ * reads the same as tokens.json. That is the usual mapping, not a pixel-exact
+ * one: CSS blurs with sigma = blur / 2 and Flutter with 0.57735 * blurRadius
+ * + 0.5, so the Flutter shadow is slightly softer at the same number.
+ */
+const dartShadowLayers = (css, where) =>
+  // Split on the commas BETWEEN layers, not the ones inside rgba(...).
+  css.split(/,(?![^(]*\))/).map((raw) => {
+    const layer = raw.trim();
+    const m = layer.match(/^((?:-?[\d.]+(?:px)?\s+){2,4})rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/);
+    if (!m) {
+      throw new Error(
+        `${where}: "${layer}" is not "x y blur [spread] rgba(r, g, b, a)". `
+        + `Extend dartShadowLayers in build.mjs rather than approximating it in Dart.`,
+      );
+    }
+    const [x, y, blur = 0, spread = 0] = m[1].trim().split(/\s+/).map((n) => Number.parseFloat(n));
+    const [r, g, b] = m.slice(2, 5).map(Number);
+    const a = Number(m[5]);
+    if ([x, y, blur, spread, a].some(Number.isNaN) || a > 1 || [r, g, b].some((c) => c > 255)) {
+      throw new Error(`${where}: "${layer}" has an out-of-range number.`);
+    }
+    return `BoxShadow(color: Color.fromRGBO(${r}, ${g}, ${b}, ${a}), `
+      + `offset: Offset(${x.toFixed(1)}, ${y.toFixed(1)}), `
+      + `blurRadius: ${blur.toFixed(1)}, spreadRadius: ${spread.toFixed(1)})`;
+  });
+
 /* ---------- CSS ---------- */
 function cssBlock(indent = '  ') {
   const L = [];
@@ -363,6 +402,27 @@ function dartSemantic(theme) {
   for (const [name, pair] of Object.entries(tokens.semantic)) {
     const v = resolve(pair[theme]);
     if (isHex(v)) L.push(`  static const Color ${dartName(name)} = Color(${hexToArgb(v)});`);
+  }
+  L.push('}');
+  return L.join('\n');
+}
+/* Elevation per theme — the same --shadow-* ramp semanticCss emits. Named
+   BabelShadowLight/Dark after BabelColorsLight/Dark: in this file a bare
+   `Babel<Thing>` class is theme-invariant, and these are not — the light
+   arm's warm tint vanishes on a dark surface. */
+function dartShadows(theme) {
+  const Theme = theme[0].toUpperCase() + theme.slice(1);
+  const L = [];
+  L.push(`/// Elevation shadows — ${theme} theme. The web's \`--shadow-*\` ramp, one`);
+  L.push('/// [BoxShadow] per CSS layer: `BoxDecoration(boxShadow: BabelShadow' + Theme + '.sm)`.');
+  L.push(`abstract final class BabelShadow${Theme} {`);
+  for (const [name, pair] of Object.entries(tokens.shadow)) {
+    if (typeof pair?.[theme] !== 'string')
+      throw new Error(`shadow.${name} has no ${theme} value; every step needs both themes.`);
+    L.push(`  static const List<BoxShadow> ${dartName(name)} = <BoxShadow>[`);
+    for (const layer of dartShadowLayers(pair[theme], `shadow.${name}.${theme}`))
+      L.push(`    ${layer},`);
+    L.push('  ];');
   }
   L.push('}');
   return L.join('\n');
@@ -541,8 +601,9 @@ const dart = `// Babel Design Tokens — GENERATED from tokens.json. Do not edit
 // Brand: black core + bronze accent (#B08D57). Consumed by mobile via the
 // babel_design_tokens pub package (import 'package:babel_design_tokens/babel_tokens.dart').
 //
-// Imports flutter/widgets (not just dart:ui) because BabelGap and BabelInsets
-// are Widget and EdgeInsets constants. The package already depends on Flutter.
+// Imports flutter/widgets (not just dart:ui) because BabelGap, BabelInsets and
+// BabelShadowLight/Dark are Widget, EdgeInsets and BoxShadow constants. The
+// package already depends on Flutter.
 import 'package:flutter/widgets.dart';
 
 ${dartColors()}
@@ -580,6 +641,10 @@ ${Object.entries(tokens.radius).map(([k, v]) => `  static const double ${dartNam
 abstract final class BabelBorder {
 ${Object.entries(tokens.border).map(([k, v]) => `  static const double ${dartName(k)} = ${Number(v).toFixed(1)};`).join('\n')}
 }
+
+${dartShadows('light')}
+
+${dartShadows('dark')}
 
 ${dartDurations()}
 
