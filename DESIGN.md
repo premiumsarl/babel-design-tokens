@@ -133,7 +133,7 @@ Three roles do not cross to Dart, and are skipped rather than approximated:
 1. **Rhythm is produced by the nearest container's `gap`.** An element never sets `margin-bottom` to create rhythm.
 2. **Two levels only:** page (`--gap-page`) and section (`--gap-section`).
 3. **A component declares its role token, never a primitive.** `padding: var(--space-6)` on a card is a violation *even though the number is right*.
-4. **New page roots must register** in the consumer's role registry, or CI fails.
+4. **New page roots must register** in the consumer's role registry, or its spacing guard fails (admin: `scripts/check-spacing.mjs` against `src/spacing-roles.json`, run by the pre-push hook).
 
 ### 4.4 What this actually retires
 
