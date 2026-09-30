@@ -73,10 +73,12 @@ const walkFlat = (obj, prefix) => {
     }
   }
 };
-['color', 'semantic', 'font', 'space', 'spaceRole', 'radius', 'shadow', 'z',
- 'breakpoint', 'duration', 'easing', 'motionRole'].forEach(
-  (g) => walkFlat(tokens[g], g),
-);
+// Every group, not a hand-kept list: the list this replaces had no `border`,
+// so v0.7.0 shipped the border widths to CSS and Dart but not to the default
+// export, and nothing failed. A new group now reaches the flat map by default.
+Object.keys(tokens)
+  .filter((g) => !g.startsWith('$'))
+  .forEach((g) => walkFlat(tokens[g], g));
 
 /* ---------- spacing emit helpers ---------- */
 
