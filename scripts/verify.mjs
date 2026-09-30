@@ -12,7 +12,8 @@
 //      whatever cannot run is SKIPPED with a warning naming the file, never
 //      silently)
 //   5. ratchet scope self-test
-//   6. npm/pub version parity (package.json == dart/pubspec.yaml)
+//   6. npm/pub version parity (package.json == dart/pubspec.yaml), and the
+//      version has a dart/CHANGELOG.md entry
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -69,9 +70,13 @@ if (!onPath('dart')) {
 
 run('ratchet scope (test files excluded, real literals counted)', 'node', ['scripts/__tests__/ratchet-scope.test.mjs']);
 
-console.log('\n▶ version parity (package.json == dart/pubspec.yaml)');
+console.log('\n▶ version parity (package.json == dart/pubspec.yaml) + CHANGELOG entry');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
 const m = readFileSync(join(root, 'dart/pubspec.yaml'), 'utf8').match(/^version:\s*(\S+)/m);
 if (pkg !== (m && m[1])) { console.error(`✗ version mismatch: package.json ${pkg} != dart/pubspec.yaml ${m && m[1]}`); process.exit(1); }
+// The CHANGELOG sat at 0.2.0 through five releases because nothing read it;
+// consumers decide a pin bump from it, so a release without an entry fails.
+const changelog = readFileSync(join(root, 'dart/CHANGELOG.md'), 'utf8');
+if (!changelog.split('\n').some((l) => l.trim() === `## ${pkg}`)) { console.error(`✗ dart/CHANGELOG.md has no "## ${pkg}" entry — add one for this release`); process.exit(1); }
 console.log(`  ${pkg}`);
 console.log('\n✓ verify passed');
