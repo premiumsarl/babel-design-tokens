@@ -1,8 +1,9 @@
 // Tokens + contracts integrity gate — everything .github/workflows/verify.yml
 // ran until GitHub Actions was removed on 2026-09-14. dist/ and dart/lib/ are
 // COMMITTED but GENERATED, and consumers install straight from git, so this
-// is the only enforcement point. Runs from `npm run verify` and the pre-push
-// hook (.githooks/pre-push, installed by `npm install`). ~25s.
+// is the only enforcement point. Runs from `npm run verify`, the pre-push
+// hook (.githooks/pre-push, installed by `npm install`), and README release
+// step 6 on a clean checkout of the commit being tagged. ~25s.
 //
 //   1. regenerate from tokens.json + contracts/ and fail on drift
 //   2. WCAG contrast gate

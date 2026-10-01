@@ -61,7 +61,7 @@ Install (a git dependency needs no registry; pin the latest release tag):
    single-theme site's own accent. */
 @import "@premiumsarl/babel-design-tokens/tokens.values.css";
 ```
-`import tokens from "@premiumsarl/babel-design-tokens"` returns the resolved flat map (`tokens.flat.json`).
+`import tokens from "@premiumsarl/babel-design-tokens" with { type: "json" }` returns the resolved flat map (`tokens.flat.json`). The export is a JSON file, so Node ESM needs the `with { type: "json" }` attribute and throws `ERR_IMPORT_ATTRIBUTE_MISSING` without it; bundlers also accept it without the attribute. The same goes for the `/tokens.json` and `/contracts.json` subpaths.
 
 ### Mobile — pub (Dart)
 
@@ -264,7 +264,8 @@ npm run verify                      # the whole gate (the pre-push hook runs it)
 2. `npm run build` — regenerates `dist/*` **and** `dart/lib/*`.
 3. `npm run verify` — every gate above. Put Flutter on `PATH` first: without it the Dart step is skipped, and the warning names the file it did not analyze.
 4. Bump `version` in **both** `package.json` and `dart/pubspec.yaml` (keep them equal), and add a `## X.Y.Z` entry to `dart/CHANGELOG.md`. `verify` fails without one.
-5. Commit the sources, `dist/`, and `dart/lib/`, then tag `vX.Y.Z` so npm and pub consumers pin the same release.
+5. Commit the sources, `dist/`, and `dart/lib/`.
+6. On a clean checkout of the exact commit being tagged (a fresh clone or `git worktree add`; for a merged PR, the merge commit on `main`), run `npm run verify` with Flutter on `PATH` and check that no line of its output says `SKIPPED` (verify still passes when it could not analyze a Dart file), then tag that commit `vX.Y.Z` so npm and pub consumers pin the same release. The pre-push hook does not stand in for this: it checks your working tree rather than the ref you push, `SKIP_VERIFY=1` skips it, and a merge made on GitHub runs no hook at all.
 
 ### Vendored scripts
 
@@ -295,11 +296,12 @@ output rather than derived. Record the move in the baseline's `$comment`;
 `--update-baseline` preserves it, but writes only `count`, so add the prose by
 hand.
 
-> A contract change is a **wire** change: a consumer only sees it after step 5
+> A contract change is a **wire** change: a consumer only sees it after step 6
 > and a pin bump on its side. Removing a value is therefore never safe in one
 > release — move it to `deprecated` first, let every client ship, then drop it.
 
 > Currently `"private": true` — safe for the git-dependency flow above. A git install never
-> fires `prepublishOnly`, so the gate for this flow is `npm run verify`, run by the pre-push
-> hook. To publish to a registry (e.g. GitHub Packages) later, set `private:false` + add
-> `publishConfig`; `prepublishOnly` (build + contrast + contracts) then also runs on `npm publish`.
+> fires `prepublishOnly`, so the gate for this flow is `npm run verify`: the pre-push hook
+> runs it on push, and release step 6 runs it on the commit being tagged. To publish to a
+> registry (e.g. GitHub Packages) later, set `private:false` + add `publishConfig`;
+> `prepublishOnly` (build + contrast + contracts) then also runs on `npm publish`.

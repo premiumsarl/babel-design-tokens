@@ -133,7 +133,7 @@ Three roles do not cross to Dart, and are skipped rather than approximated:
 1. **Rhythm is produced by the nearest container's `gap`.** An element never sets `margin-bottom` to create rhythm.
 2. **Two levels only:** page (`--gap-page`) and section (`--gap-section`).
 3. **A component declares its role token, never a primitive.** `padding: var(--space-6)` on a card is a violation *even though the number is right*.
-4. **New page roots must register** in the consumer's role registry, or its spacing guard fails (admin: `scripts/check-spacing.mjs` against `src/spacing-roles.json`, run by the pre-push hook).
+4. **New page roots must register** in the consumer's role registry. Admin's spacing guard (`scripts/check-spacing.mjs` against `src/spacing-roles.json`, run by the pre-push hook) fails on an unregistered page root that sets `gap` or padding, but it recognises a page root only by its class-name suffix: `-page`, `-layout` or `-content`. So a new page root must use one of those suffixes as well as register. The registry check holds any registered selector to its role, but only those suffixes make an unregistered root fail, so an unregistered `.reports-view` or `.reports-shell` is never flagged.
 
 ### 4.4 What this actually retires
 
@@ -264,7 +264,7 @@ Same token names, three renderings — so a change to `tokens.json` reaches all 
 
 The org's GitHub Actions were removed on 2026-09-14, so the pre-push hooks (`.githooks/pre-push` in admin and mobile) are what run the ratchets now. The team already learned drift "regressed within a week" without a ratchet — this is the ratchet.
 
-A second guard, `scripts/check-contrast.mjs` (`npm run check:contrast`), verifies every foreground/background pair the palette promises against WCAG AA in both themes. It runs in `npm run verify`, which this repo's pre-push hook runs, so the tokens can't ship a combination that fails contrast. (`prepublishOnly` runs it too, but a git-dependency install never fires that hook.) It has already caught and fixed the interactive bronze: `brand-600` measured 3.7–4.2:1 on light grounds, so the working step is `brand-700`.
+A second guard, `scripts/check-contrast.mjs` (`npm run check:contrast`), verifies every foreground/background pair the palette promises against WCAG AA in both themes. It runs in `npm run verify`, which this repo's pre-push hook runs. That hook is a client-side gate, not a guarantee: `npm install` turns it on (the `prepare` script sets `core.hooksPath`), `SKIP_VERIFY=1` skips it, it checks the working tree rather than the commit being pushed, and nothing runs on a merge made on GitHub. A failing combination can therefore still reach a tag, which is why the [release steps](./README.md#editing-tokens--releasing) run `npm run verify` on a clean checkout of the exact commit being tagged before tagging it. (`prepublishOnly` runs the check too, but a git-dependency install never fires that hook.) The check has already caught and fixed the interactive bronze: `brand-600` measured 3.7–4.2:1 on light grounds, so the working step is `brand-700`.
 
 ---
 

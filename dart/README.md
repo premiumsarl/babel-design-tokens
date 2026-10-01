@@ -92,5 +92,8 @@ keep a fallback member — `NotificationType.unknown` already does exactly this.
 From the repo root: `npm run build` (writes `dart/lib/babel_tokens.dart` and
 `dart/lib/babel_contracts.dart` plus the CSS/JSON outputs). Bump `version` here and in
 the root `package.json` together, add the release to [`CHANGELOG.md`](./CHANGELOG.md),
-run `npm run verify` with Flutter on `PATH` (it analyzes both Dart files), then tag the
-repo `vX.Y.Z` so both the npm and pub consumers can pin the same release.
+and commit. Then, on a clean checkout of the commit you will tag, run `npm run verify`
+with Flutter on `PATH` (it analyzes both Dart files; no line may say `SKIPPED`), and tag
+that commit `vX.Y.Z` so both the npm and pub consumers can pin the same release. The
+[release steps](../README.md#editing-tokens--releasing) say why the pre-push hook does
+not stand in for this.
