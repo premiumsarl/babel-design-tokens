@@ -231,6 +231,35 @@ const dartShadowLength = (len, where) => {
 const dartDouble = (n) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 
 /**
+ * A size or duration token as a Dart literal, refused unless it is a number.
+ * Nothing type-checks tokens.json, and the CSS side prints a value as it
+ * is: `border.hairline: null` became `--border-hairline: nullpx;` beside a
+ * Dart `0.0` that analyzes clean, a group's `$description` string became
+ * `NaN` in Dart, and a `150.5` duration fed Duration(milliseconds:), which
+ * takes an int. `int` asks for a whole number and emits it as one.
+ */
+const dartNum = (v, where, int = false) => {
+  // A string that reads as a number is refused as a string: a "9" reads as
+  // 9 on the web and in Dart alike, but tokens.flat.json would carry it as a
+  // string (a `$` key stays out of the flat JSON).
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) {
+    throw new Error(
+      `${where} is ${JSON.stringify(v)}, a string, not a number. tokens.json gives sizes and `
+      + `durations as JSON numbers${/\.\$/.test(where) ? '' : ', and tokens.flat.json would carry this one as a string'}. `
+      + 'Write it without the quotes.',
+    );
+  }
+  if (typeof v !== 'number' || !Number.isFinite(v) || (int && !Number.isInteger(v))) {
+    throw new Error(
+      `${where} is ${typeof v === 'number' ? v : JSON.stringify(v)}, not a `
+      + (int ? 'whole number: Dart\'s Duration(milliseconds:) takes an int' : 'finite number')
+      + '. CSS prints a token as it is, so the web and Dart would read this one differently.',
+    );
+  }
+  return int ? String(v) : dartDouble(v);
+};
+
+/**
  * A CSS box-shadow value as Dart `BoxShadow(...)` expressions, one per layer.
  *
  * Until v0.8.0 the shadow group was CSS-only, so mobile had no shadow token to
@@ -590,7 +619,7 @@ function dartDurations() {
   const L = ['/// Animation durations. One ladder for every transition in the app.',
              'abstract final class BabelDuration {'];
   for (const [k, v] of Object.entries(tokens.duration))
-    L.push(`  static const Duration ${dartName(k)} = Duration(milliseconds: ${v});`);
+    L.push(`  static const Duration ${dartName(k)} = Duration(milliseconds: ${dartNum(v, `duration.${k}`, true)});`);
   L.push('}');
   return L.join('\n');
 }
@@ -650,7 +679,7 @@ ${dartSemantic('dark')}
 
 /// Spacing scale (logical px). One 4px-based ladder for the whole app.
 abstract final class BabelSpace {
-${Object.entries(tokens.space).map(([k, v]) => `  static const double s${dartName(k)} = ${dartDouble(Number(v))};`).join('\n')}
+${Object.entries(tokens.space).map(([k, v]) => `  static const double s${dartName(k)} = ${dartNum(v, `space.${k}`)};`).join('\n')}
 }
 
 ${dartGaps()}
@@ -664,18 +693,18 @@ ${dartRoles()}
 abstract final class BabelSize {
 ${Object.entries(tokens.spaceRole)
   .filter(([k, v]) => typeof v === 'number')
-  .map(([k, v]) => `  static const double ${dartName(k)} = ${dartDouble(Number(v))};`)
+  .map(([k, v]) => `  static const double ${dartName(k)} = ${dartNum(v, `spaceRole.${k}`)};`)
   .join('\n')}
 }
 
 /// Corner radii (logical px).
 abstract final class BabelRadius {
-${Object.entries(tokens.radius).map(([k, v]) => `  static const double ${dartName(k).replace(/^_/, 'r')} = ${dartDouble(Number(v))};`).join('\n')}
+${Object.entries(tokens.radius).map(([k, v]) => `  static const double ${dartName(k).replace(/^_/, 'r')} = ${dartNum(v, `radius.${k}`)};`).join('\n')}
 }
 
 /// Border widths shared across the products — see the border group in tokens.json.
 abstract final class BabelBorder {
-${Object.entries(tokens.border).map(([k, v]) => `  static const double ${dartName(k)} = ${dartDouble(Number(v))};`).join('\n')}
+${Object.entries(tokens.border).map(([k, v]) => `  static const double ${dartName(k)} = ${dartNum(v, `border.${k}`)};`).join('\n')}
 }
 
 ${dartShadows('light')}
@@ -692,7 +721,7 @@ ${dartMotionRoles()}
 abstract final class BabelType {
   static const String display = 'Space Grotesk';
   static const String body = 'Inter';
-${Object.entries(tokens.font.size).map(([k, v]) => `  static const double size${dartName(k).replace(/^_/, 'S')} = ${dartDouble(Number(v))};`).join('\n')}
+${Object.entries(tokens.font.size).map(([k, v]) => `  static const double size${dartName(k).replace(/^_/, 'S')} = ${dartNum(v, `font.size.${k}`)};`).join('\n')}
 }
 `;
 

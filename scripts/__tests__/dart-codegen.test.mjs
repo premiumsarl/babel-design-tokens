@@ -155,9 +155,17 @@ expectRefused('an inset shadow', shadow('inset 0 1px 2px rgba(0,0,0,.5)'),
 expectRefused('a malformed alpha', shadow('0 4px 8px rgba(0,0,0,1.)'),
   'shadow.sm.light: "0 4px 8px rgba(0,0,0,1.)" is not');
 
-/* ---- every other Dart number crosses unrounded too ---- */
+/* ---- every other Dart number crosses unrounded too, and must be a number ---- */
 expectBuilds('a fractional border width', ({ tokens }) => { tokens.border.hairline = 0.75; },
   (dart) => (dart.includes('  static const double hairline = 0.75;') ? undefined : '0.75 must cross verbatim, not as 0.8'));
+expectRefused('a group description where a size belongs', ({ tokens }) => { tokens.radius.$description = 'Corner radii'; },
+  'radius.$description is "Corner radii", not a finite number');
+expectRefused('a null border width', ({ tokens }) => { tokens.border.hairline = null; },
+  'border.hairline is null, not a finite number');
+expectRefused('a size written as a string', ({ tokens }) => { tokens.radius.md = '9'; },
+  'radius.md is "9", a string, not a number', 'tokens.flat.json would carry this one as a string');
+expectRefused('a fractional duration', ({ tokens }) => { tokens.duration.fast = 150.5; },
+  'duration.fast is 150.5, not a whole number');
 
 /* ---- every generated name is public ---- */
 expectBuilds('a digit-leading shadow step', ({ tokens }) => {
