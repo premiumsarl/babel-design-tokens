@@ -19,9 +19,10 @@ contracts/                  ← shared vocabulary: the ONLY files you edit
   rules/*.json              → numeric + string bounds more than one repo enforces
 build.mjs                   ← generator (no deps): resolves aliases, emits the outputs
                               `--check` compares instead of writing
-scripts/check-tokens.mjs    ← the drift ratchet (fails CI on new raw color literals)
+scripts/check-tokens.mjs    ← the drift ratchet (fails on new raw color literals; consumers vendor it)
 scripts/check-contrast.mjs  ← the WCAG gate
 scripts/check-contracts.mjs ← the contract invariants (see Contracts below)
+scripts/verify.mjs          ← the whole gate: `npm run verify`, run by .githooks/pre-push
 dist/                       ← GENERATED — never hand-edit
   tokens.css                → import in admin (theme-adaptive: light/dark)
   tokens.values.css         → import in website (flat, single-theme — see note)
@@ -43,10 +44,10 @@ so a token or vocabulary change is a version bump, not a file copy.
 
 ### Admin / Website — npm (CSS)
 
-Install (a git dependency needs no registry; pin a tag):
+Install (a git dependency needs no registry; pin the latest release tag):
 ```jsonc
 // package.json
-"@premiumsarl/babel-design-tokens": "github:premiumsarl/babel-design-tokens#v0.2.0"
+"@premiumsarl/babel-design-tokens": "github:premiumsarl/babel-design-tokens#v0.8.0"
 ```
 ```css
 /* Admin — theme-adaptive (drives light/dark off :root[data-theme]) */
@@ -60,7 +61,7 @@ Install (a git dependency needs no registry; pin a tag):
    single-theme site's own accent. */
 @import "@premiumsarl/babel-design-tokens/tokens.values.css";
 ```
-`import tokens from "@premiumsarl/babel-design-tokens"` returns the resolved flat map (`tokens.flat.json`).
+`import tokens from "@premiumsarl/babel-design-tokens" with { type: "json" }` returns the resolved flat map (`tokens.flat.json`). The export is a JSON file, so Node ESM needs the `with { type: "json" }` attribute and throws `ERR_IMPORT_ATTRIBUTE_MISSING` without it; bundlers also accept it without the attribute. The same goes for the `/tokens.json` and `/contracts.json` subpaths.
 
 ### Mobile — pub (Dart)
 
@@ -69,11 +70,12 @@ dependency (see [dart/README.md](./dart/README.md)):
 ```yaml
 dependencies:
   babel_design_tokens:
-    git: { url: https://github.com/premiumsarl/babel-design-tokens.git, ref: v0.2.0, path: dart }
+    git: { url: https://github.com/premiumsarl/babel-design-tokens.git, ref: v0.8.0, path: dart }
 ```
 ```dart
 import 'package:babel_design_tokens/babel_tokens.dart';
-BabelColors.brand500;  BabelColorsLight.accentStrong;  BabelSpace.s4;  BabelType.body;
+BabelColors.brand500;  BabelColorsLight.accentStrong;  BabelSpace.s_4;  BabelType.body;
+BoxDecoration(boxShadow: BabelShadowLight.sm);   // BabelShadowDark in dark mode
 
 // Motion — a role, never a raw Duration/Curve:
 AnimatedContainer(
@@ -253,14 +255,18 @@ npm run build                       # regenerate all outputs from tokens.json + 
 npm run build:check                 # compare the committed output instead of writing
 npm run check -- ./path/to/src      # count raw color literals vs a baseline
 npm run check:ratchet               # the ratchet's own scope test (fixtures)
-npm run verify                      # build + contrast + contracts + ratchet
+npm run verify                      # the whole gate (the pre-push hook runs it): build, drift,
+                                    # contrast, contracts, Dart analyze, ratchet + codegen
+                                    # self-tests, version + CHANGELOG
+VERIFY_STRICT=1 npm run verify      # the same, but a check it has to skip fails it (step 6)
 ```
 
 1. Edit `tokens.json` (alias with `{color.brand.500}`) and/or `contracts/*.json`.
 2. `npm run build` — regenerates `dist/*` **and** `dart/lib/*`.
-3. `npm run verify` — WCAG contrast plus the contract invariants.
-4. Bump `version` in **both** `package.json` and `dart/pubspec.yaml` (keep them equal).
-5. Commit the sources, `dist/`, and `dart/lib/`, then tag `vX.Y.Z` so npm and pub consumers pin the same release.
+3. `npm run verify` — every gate above. Put Flutter on `PATH` first: without it the Dart step is skipped, and the warning names the file it did not analyze.
+4. Bump `version` in **both** `package.json` and `dart/pubspec.yaml` (keep them equal), and add a `## X.Y.Z` entry to `dart/CHANGELOG.md`. `verify` fails without one.
+5. Commit the sources, `dist/`, and `dart/lib/`.
+6. On a clean checkout of the exact commit being tagged (a fresh clone or `git worktree add`; for a merged PR, the merge commit on `main`), run `VERIFY_STRICT=1 npm run verify` with Flutter on `PATH`, then tag that commit `vX.Y.Z` so npm and pub consumers pin the same release. Plain `npm run verify` still passes when it could not analyze a Dart file (it only warns `⚠ … SKIPPED`); `VERIFY_STRICT=1` makes that skip fail the run, so a pass means both Dart files were analyzed. The pre-push hook does not stand in for this: it checks your working tree rather than the ref you push, `SKIP_VERIFY=1` skips it, and a merge made on GitHub runs no hook at all.
 
 ### Vendored scripts
 
@@ -291,10 +297,12 @@ output rather than derived. Record the move in the baseline's `$comment`;
 `--update-baseline` preserves it, but writes only `count`, so add the prose by
 hand.
 
-> A contract change is a **wire** change: a consumer only sees it after step 5
+> A contract change is a **wire** change: a consumer only sees it after step 6
 > and a pin bump on its side. Removing a value is therefore never safe in one
 > release — move it to `deprecated` first, let every client ship, then drop it.
 
-> Currently `"private": true` — safe for the git-dependency flow above. To publish to a
-> registry (e.g. GitHub Packages) later, set `private:false` + add `publishConfig`; the
-> `prepublishOnly` build+contrast+contracts gate then runs on `npm publish`.
+> Currently `"private": true` — safe for the git-dependency flow above. A git install never
+> fires `prepublishOnly`, so the gate for this flow is `npm run verify`: the pre-push hook
+> runs it on push, and release step 6 runs it on the commit being tagged. To publish to a
+> registry (e.g. GitHub Packages) later, set `private:false` + add `publishConfig`;
+> `prepublishOnly` (build + contrast + contracts) then also runs on `npm publish`.

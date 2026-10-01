@@ -16,7 +16,7 @@ Brand in one line: **black / charcoal core, bronze accent.** The core carries pr
 | Canonical brand | **`#B08D57`** (brand‑500) | The logo fill — the brand mark is the source of truth. |
 | Primary action | **Core** (near‑black `#14110c` light → near‑white `#f4f1ea` dark) | Neutral, not a hue. Black buttons in light; they invert on dark. |
 | Brand accent | **Bronze** | `accent` = brand‑500 (decorative/large); `accent-strong` = brand‑700 `#7c6139` for anything that must pass contrast — buttons, links, accent text, focus. |
-| Superseded | indigo `#6366f1`, the slate/Tailwind palette, the 5 divergent bronzes, 8 greens / 6 reds / 4 golds | Replaced by the ramps + semantic roles below. **Superseded, not yet gone** — the admin panel still renders Tailwind's status shades over the package's; see the adoption note in §2. |
+| Superseded | indigo `#6366f1`, the slate/Tailwind palette, the 5 divergent bronzes, 8 greens / 6 reds / 4 golds | Replaced by the ramps + semantic roles below. **Superseded, not yet gone** — the admin panel still renders its own dark status ramp and `error-solid` over the package's; see the adoption note in §2. |
 
 The bronze is deliberately split: **`accent` (500)** is the brand hue for fills and dark‑mode surfaces; **`accent-strong` (700)** is the *working* bronze. Never set body text or a white‑text button on `accent` — it's ~3:1. Use `accent-strong`, which is verified ≥4.5:1 for text and buttons in both themes (`scripts/check-contrast.mjs`).
 
@@ -61,14 +61,14 @@ The bronze is deliberately split: **`accent` (500)** is the brand hue for fills 
 
 `success #32BA7C`, `warning #FFA800`, `error #FF5050`, `info #3b82f6` were already the agreed values in admin *and* mobile, and they still agree — those four **500** rungs are identical in the package and in every consumer.
 
-> **Adoption is partial, and this section used to overstate it.** It read "this just makes them the **only** ones … nothing hardcodes a hex." Neither half was true, and saying so hid real drift for months. Measured **2026-08-31** against v0.6.0:
+> **Adoption is partial, and this section used to overstate it.** It read "this just makes them the **only** ones … nothing hardcodes a hex." Neither half was true, and saying so hid real drift for months. Measured **2026-08-31** against v0.6.0; the admin line re-measured **2026-09-30** against v0.7.0:
 >
 > - **Mobile — reconciled.** 20 files read `BabelColorsLight/Dark.{success,warning,error,info}`. No raw status hex in `lib/`.
-> - **Admin — not reconciled.** `globals.css` declares **27** of these names itself and **22 diverge**. The 500s match; what diverges is everything around them — the `50/100/400/600/700` rungs and the `solid`/`bg`/`text` roles, still carrying Tailwind's shades (`#fef2f2`, `#d1fae5`, `#dbeafe`, `#fef3c7`) and one-off greens and reds (`#279B0C` vs `#1f9e66`, `#3A683B` vs `#0f7a4d`, `#BB2F48` vs `#c62828`). Because those declarations sit **after** the `@import`, the local values are the ones that render — the package's are dead. See §8.
-> - **Website —** defines no status colours at all, and is still pinned to **v0.2.0**.
-> - **"Nothing hardcodes a hex" was never true.** Admin alone carries **490** raw colour literals today. That is exactly why the ratchet in §8 exists; a doc claiming zero is a doc arguing the ratchet is unnecessary.
+> - **Admin — light reconciled, dark not.** On 2026-08-31 `globals.css` declared 27 of these names and 22 diverged. Since then admin deleted its light status ramps and six compatibility aliases (its `shadowedLegacy` ratchet went 91 → 66), so the package's **light** status palette now renders, with one exception: `--color-error-solid`, which admin still declares in both themes (`#b91c1c` against the package's `#dc2626`). The **dark** status ramp is still admin's own: 19 rungs under `[data-theme='dark']`. The package has no dark value for those names, so admin treats this as a deliberate per-theme divergence. That makes **21** status declarations that render instead of the package's. Because they sit **after** the `@import`, the local values win.
+> - **Website —** defines no status colours at all, and was pinned to **v0.2.0** on 2026-08-31.
+> - **"Nothing hardcodes a hex" was never true.** Admin carried **490** raw colour literals on 2026-08-31. That is exactly why the ratchet in §8 exists; a doc claiming zero is a doc arguing the ratchet is unnecessary. The live count is in the baseline file named in §8, not here.
 >
-> Closing the 22 is a **design decision per value** — which green is the success green? — not a rename, so it is not a sweep anyone should do unasked. They are held at a baseline by `check-motion.mjs` check 3 in the admin panel, so the number can only go down.
+> Closing the remaining 21 is a **design decision per value** — which dark green is the success green? — not a rename, so it is not a sweep anyone should do unasked. They are held at a baseline by `check-motion.mjs` check 3 in the admin panel (`shadowedLegacy` in `scripts/motion-baseline.json`), so the number can only go down.
 
 ### Charts (categorical — kills the ad‑hoc rainbows)
 `chart‑1` brand‑500 · `chart‑2` info · `chart‑3` success · `chart‑4` warning · `chart‑5 #8b5cf6` · `chart‑6 #ef4444` · `chart‑7 #14b8a6` · `chart‑8 #ec4899`. Data‑viz cycles this order; no chart file defines its own palette.
@@ -133,18 +133,21 @@ Three roles do not cross to Dart, and are skipped rather than approximated:
 1. **Rhythm is produced by the nearest container's `gap`.** An element never sets `margin-bottom` to create rhythm.
 2. **Two levels only:** page (`--gap-page`) and section (`--gap-section`).
 3. **A component declares its role token, never a primitive.** `padding: var(--space-6)` on a card is a violation *even though the number is right*.
-4. **New page roots must register** in the consumer's role registry, or CI fails.
+4. **New page roots must register** in the consumer's role registry. Admin's spacing guard (`scripts/check-spacing.mjs` against `src/spacing-roles.json`, run by the pre-push hook) fails on an unregistered page root that sets `gap` or padding, but it recognises a page root only by its class-name suffix: `-page`, `-layout` or `-content`. So a new page root must use one of those suffixes as well as register. The registry check holds any registered selector to its role, but only those suffixes make an unregistered root fail, so an unregistered `.reports-view` or `.reports-shell` is never flagged.
 
 ### 4.4 What this actually retires
 
 - **Admin**: its private rem fork of `--space-*`, and four disagreeing page rhythms.
 - **Website**: `--space-xs…5xl` become aliases onto the ladder. Seven of the nine were already exact (`0.25/0.5/1/1.5/2/3/4rem`); `4xl`/`5xl` needed the new 96/128 rungs.
-- **Mobile**: `BabelDecorations.kSpacing*` — which had **zero call sites** and was dead weight, not a ladder in use. The live vocabulary is `SizedBoxUtil` (931 uses, defined in `base_mobile_library`) and 1,704 literal `EdgeInsets`. Those are what `BabelGap` / `BabelInsets` are for.
+- **Mobile**: `BabelDecorations.kSpacing*` — which had **zero call sites** and was dead weight, not a ladder in use. The live vocabulary is `SizedBoxUtil` (defined in `base_mobile_library`) and literal `EdgeInsets`: 931 and 1,704 uses when this was written on 2026-08-06, and `SizedBoxUtil` had grown to 1,156 by 2026-09-30. Those are what `BabelGap` / `BabelInsets` are for.
 
-## 5 · Radius · Shadow · Z
+## 5 · Radius · Border · Shadow · Z
 
 - **Radius**: `sm 6 · md 9 · lg 12 · xl 16 · 2xl 22 · full`. One card radius (`lg = 12`) — retires the 12‑vs‑15 disagreement.
-- **Shadow**: `sm · md · lg`, warm‑tinted in light, black in dark. Retires the 3 conflicting mobile shadow tokens.
+  Two named shapes sit beside `full`, which is itself a role rather than a scale step: `pill 40`, Babel's CTA shape, and `sheet 20`, the top radius of a bottom sheet. Both were house decisions that lived only in babel-mobile's theme until v0.7.0 (`--radius-pill` / `--radius-sheet`, `BabelRadius.pill` / `.sheet`).
+- **Border**: `hairline 1 · accent-rail 3` (`--border-*`, `BabelBorder`). The accent rail is the tone rail down the side of a card, the same 3px on the admin StatCard and the mobile verdict band.
+- **Shadow**: `sm · md · lg`, warm‑tinted in light, black in dark. CSS gets `--shadow-*` per theme. Since v0.8.0 Dart gets `BabelShadowLight` / `BabelShadowDark`, each step a `List<BoxShadow>` with one entry per CSS layer.
+  **Not adopted anywhere yet.** Admin redeclares all three steps in both themes to keep its own subtler ramp, and those declarations are counted in its `shadowedLegacy`. Mobile's cards still use `base_mobile_library`'s `UIConstants.defaultBoxShadow`, because until v0.8.0 there was no Dart token to use. Choosing between the package ramp and admin's is an owner decision. Until someone makes it, "retires the conflicting mobile shadows" is the plan, not the state.
 - **Z**: `dropdown 100 · sticky 200 · overlay 300 · modal 400 · toast 500 · chatbot 600`.
   One rung per stacking job, 100 apart. **The gap is load-bearing**: a caller that cannot
   spend a `var()` — React's `zIndex` prop takes a number — has to land a literal *between*
@@ -243,7 +246,7 @@ The pipeline: **`tokens.json` → `build.mjs` →** `dist/{tokens.css, tokens.va
 
 **Website (vanilla CSS, single-theme).** Import `tokens.values.css` (the flat, no-`@media` build) — *not* `tokens.css`, whose `[data-theme]`/`@media` dark rules would override a single-theme site's own accent. Migrate `src/css/variables.css` to *reference* these values instead of redefining bronze; retire the slate palette (adopt the neutral ramp) and the standalone stylesheets (`blog.css`, `admin-login.css`, …) that consume zero tokens today.
 
-**Mobile (Flutter).** Depend on the `babel_design_tokens` pub package (the [`dart/`](./dart) folder) as a git dependency; ideally re-export it from `base_mobile_library` (the existing shared host). Map `ColorScheme` / `AppTheme` to `BabelColorsLight` / `BabelColorsDark`, `AppTypography` sizes to `BabelType`, and `SizedBoxUtil` to `BabelSpace`. Fold `babel_theme.dart` financial/realtor colors into semantic roles.
+**Mobile (Flutter).** Depend on the `babel_design_tokens` pub package (the [`dart/`](./dart) folder) as a git dependency pinned to a release tag, and re-export it from the app's own barrel (`lib/common/imports.dart` in babel-mobile, which already does this). **Never** re-export it from `base_mobile_library`. Other Premium SARL products share that library, and it stays brand-neutral: it is themed through `ThemeData` and injected palettes, and Babel overrides it in its own theme rather than changing it. Map Babel's `ColorScheme` / theme to `BabelColorsLight` / `BabelColorsDark` and its type sizes to `BabelType`. At call sites, prefer `BabelGap` / `BabelInsets` over the library's `SizedBoxUtil`. Fold `babel_theme.dart` financial/realtor colors into semantic roles.
 
 Same token names, three renderings — so a change to `tokens.json` reaches all three the same way.
 
@@ -251,24 +254,24 @@ Same token names, three renderings — so a change to `tokens.json` reaches all 
 
 ## 8 · Governance — the ratchet
 
-`scripts/check-tokens.mjs <dir>` counts raw color literals (hex, `0xFF…`, `rgb/rgba`) that bypass the tokens and fails CI when the count rises above a per‑repo **baseline**. You don't fix every legacy literal on day one — you snapshot the current count (`--update-baseline`) and it can only go **down**. Today's baselines from this repo's own scan:
+`scripts/check-tokens.mjs <dir>` counts raw color literals (hex, `0xFF…`, `rgb/rgba`) that bypass the tokens and fails when the count rises above a per‑repo **baseline**. You don't fix every legacy literal on day one — you snapshot the current count (`--update-baseline`) and it can only go **down**. The numbers live in each consumer's baseline file, not here: this table used to copy them, and the copies went stale within weeks.
 
-| Repo | Raw color literals (current) |
+| Repo | Baseline (the live count) |
 |---|---|
-| admin `src/` | **962** |
-| website `src/` | **728** |
-| mobile `lib/` | **196** |
+| admin | `src/.token-baseline.json` (vendored `scripts/check-tokens.mjs`, run by `npm run check:tokens`) |
+| website | `.token-baseline.json` (vendored `scripts/check-tokens.mjs`) |
+| mobile | `hexBaseline` in `test/design/color_drift_test.dart` (its own scanner, which asserts equality rather than an upper bound) |
 
-Add it to each repo's `lint`/CI step: `node …/check-tokens.mjs ./src`. The team already learned drift "regressed within a week" without a ratchet — this is the ratchet.
+The org's GitHub Actions were removed on 2026-09-14, so the pre-push hooks (`.githooks/pre-push` in admin and mobile) are what run the ratchets now. The team already learned drift "regressed within a week" without a ratchet — this is the ratchet.
 
-A second guard, `scripts/check-contrast.mjs` (`npm run check:contrast`), verifies every foreground/background pair the palette promises against WCAG AA in both themes — it runs on `prepublish`, so the tokens can't ship a combination that fails contrast. (It already caught and fixed the interactive bronze: `brand-600` measured 3.7–4.2:1 on light grounds, so the working step is `brand-700`.)
+A second guard, `scripts/check-contrast.mjs` (`npm run check:contrast`), verifies every foreground/background pair the palette promises against WCAG AA in both themes. It runs in `npm run verify`, which this repo's pre-push hook runs. That hook is a client-side gate, not a guarantee: `npm install` turns it on (the `prepare` script sets `core.hooksPath`), `SKIP_VERIFY=1` skips it, it checks the working tree rather than the commit being pushed, and nothing runs on a merge made on GitHub. A failing combination can therefore still reach a tag, which is why the [release steps](./README.md#editing-tokens--releasing) run `npm run verify` on a clean checkout of the exact commit being tagged before tagging it. (`prepublishOnly` runs the check too, but a git-dependency install never fires that hook.) The check has already caught and fixed the interactive bronze: `brand-600` measured 3.7–4.2:1 on light grounds, so the working step is `brand-700`.
 
 ---
 
 ## 9 · Migration plan (incremental, non‑breaking)
 
 0. **Land the package** (this repo) — done. Publish as `@premiumsarl/babel-design-tokens` or consume via path/git.
-1. **Wire `dist/` in** each repo (import CSS / vendor Dart) and **set baselines**. No visual change yet — tokens sit alongside the old values.
+1. **Wire the package in** each repo (import the CSS / depend on the `dart/` pub package) and **set baselines**. No visual change yet — tokens sit alongside the old values.
 2. **Reconcile the brand**: repoint each repo's brand/accent to `#B08D57` / `accent-strong`; delete the indigo & slate fallbacks. (This is the change you already previewed in the mockups.)
 3. **Collapse duplicates**: status maps → the one status set; spacing → the one ladder; shadows/radius → the tokens.
 4. **Self‑host fonts**; drop the Google Fonts `@import`.
@@ -288,7 +291,9 @@ A second guard, `scripts/check-contrast.mjs` (`npm run check:contrast`), verifie
   the `@import`, so the local value renders and the package's is dead. Both values are legal in
   their own scale, so no value-level lint goes red. It has happened three times: the whole z
   scale (dead since v0.1.0), `--duration-normal`, and 22 status colours. If the rendered value
-  is the right one, **fix the token** — don't fork it locally.
+  is the right one, **fix the token** — don't fork it locally. On 2026-09-30 the admin panel still
+  carried **66** declarations of package-owned names, **45** of them with a different value. The
+  live count is `shadowedLegacy` in admin's `scripts/motion-baseline.json`, which can only go down.
 - **Motion → a role** (`--motion-overlay`, `BabelMotion.overlay`), never a raw `150ms` or `Curves.easeInOut`.
 - **A spinner or skeleton uses `loop`.** Anything that repeats forever eases `linear` — never `standard`.
 - Changing a brand value is a **one‑line edit to `tokens.json`** + `npm run build`. If you're editing `dist/`, stop.

@@ -1,12 +1,15 @@
 #!/bin/sh
 # Local gate — replaces .github/workflows/verify.yml, deleted 2026-09-14
 # with the rest of the org's GitHub Actions. Consumers install this
-# package straight from git, so nothing downstream re-checks it: this
-# hook is the only enforcement point. Installed by `npm install`
-# (package.json `prepare` sets core.hooksPath); the package has no
-# dependencies, so `npm install` is only ever run for this.
+# package straight from git, so nothing downstream re-checks it. This
+# hook is the everyday gate, but it can be skipped and it checks the
+# working tree, not the pushed ref; README release step 6 (verify on a
+# clean checkout of the tagged commit) is the one a release relies on.
+# Installed by `npm install` (package.json `prepare` sets
+# core.hooksPath); the package has no dependencies, so `npm install` is
+# only ever run for this.
 #
-#   npm run verify           build → drift → contrast → contracts → dart → ratchet → parity (~25s)
+#   npm run verify           build → drift → contrast → contracts → dart → ratchet → codegen → parity (~25s)
 #   SKIP_VERIFY=1 git push   skip (emergencies)
 [ -n "$SKIP_VERIFY" ] && { echo "pre-push: SKIPPED (SKIP_VERIFY set)"; exit 0; }
 echo "pre-push: npm run verify (SKIP_VERIFY=1 to skip)"

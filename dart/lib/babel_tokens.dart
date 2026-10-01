@@ -2,8 +2,9 @@
 // Brand: black core + bronze accent (#B08D57). Consumed by mobile via the
 // babel_design_tokens pub package (import 'package:babel_design_tokens/babel_tokens.dart').
 //
-// Imports flutter/widgets (not just dart:ui) because BabelGap and BabelInsets
-// are Widget and EdgeInsets constants. The package already depends on Flutter.
+// Imports flutter/widgets (not just dart:ui) because BabelGap, BabelInsets and
+// BabelShadowLight/Dark are Widget, EdgeInsets and BoxShadow constants. The
+// package already depends on Flutter.
 import 'package:flutter/widgets.dart';
 
 /// Color ramps (theme-invariant).
@@ -281,6 +282,38 @@ abstract final class BabelRadius {
 abstract final class BabelBorder {
   static const double hairline = 1.0;
   static const double accentRail = 3.0;
+}
+
+/// Elevation shadows — light theme. The web's `--shadow-*` ramp, one
+/// [BoxShadow] per CSS layer: `BoxDecoration(boxShadow: BabelShadowLight.sm)`.
+abstract final class BabelShadowLight {
+  static const List<BoxShadow> sm = <BoxShadow>[
+    BoxShadow(color: Color.fromRGBO(45, 32, 15, 0.3), offset: Offset(0.0, 6.0), blurRadius: 16.0, spreadRadius: -10.0),
+  ];
+  static const List<BoxShadow> md = <BoxShadow>[
+    BoxShadow(color: Color.fromRGBO(45, 32, 15, 0.32), offset: Offset(0.0, 12.0), blurRadius: 30.0, spreadRadius: -14.0),
+    BoxShadow(color: Color.fromRGBO(45, 32, 15, 0.1), offset: Offset(0.0, 2.0), blurRadius: 6.0, spreadRadius: -2.0),
+  ];
+  static const List<BoxShadow> lg = <BoxShadow>[
+    BoxShadow(color: Color.fromRGBO(45, 32, 15, 0.34), offset: Offset(0.0, 22.0), blurRadius: 56.0, spreadRadius: -22.0),
+    BoxShadow(color: Color.fromRGBO(45, 32, 15, 0.12), offset: Offset(0.0, 2.0), blurRadius: 8.0, spreadRadius: -2.0),
+  ];
+}
+
+/// Elevation shadows — dark theme. The web's `--shadow-*` ramp, one
+/// [BoxShadow] per CSS layer: `BoxDecoration(boxShadow: BabelShadowDark.sm)`.
+abstract final class BabelShadowDark {
+  static const List<BoxShadow> sm = <BoxShadow>[
+    BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.6), offset: Offset(0.0, 8.0), blurRadius: 20.0, spreadRadius: -12.0),
+  ];
+  static const List<BoxShadow> md = <BoxShadow>[
+    BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.66), offset: Offset(0.0, 16.0), blurRadius: 40.0, spreadRadius: -16.0),
+    BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.5), offset: Offset(0.0, 2.0), blurRadius: 8.0, spreadRadius: -2.0),
+  ];
+  static const List<BoxShadow> lg = <BoxShadow>[
+    BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.72), offset: Offset(0.0, 26.0), blurRadius: 64.0, spreadRadius: -22.0),
+    BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.5), offset: Offset(0.0, 2.0), blurRadius: 10.0, spreadRadius: -2.0),
+  ];
 }
 
 /// Animation durations. One ladder for every transition in the app.

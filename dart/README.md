@@ -26,7 +26,7 @@ dependencies:
   babel_design_tokens:
     git:
       url: https://github.com/premiumsarl/babel-design-tokens.git
-      ref: v0.2.0        # pin to a release tag
+      ref: v0.8.0        # pin the latest release tag (see CHANGELOG.md)
       path: dart         # this package lives in the repo's /dart subfolder
 ```
 
@@ -37,17 +37,26 @@ import 'package:babel_design_tokens/babel_tokens.dart';
 
 Container(color: BabelColors.brand500);          // #B08D57
 final ok  = BabelColorsLight.successText;         // semantic, light
-final pad = BabelSpace.s4;                         // 16.0
+final pad = BabelSpace.s_4;                        // 16.0
 final r   = BabelRadius.lg;                         // 12.0
+const lift = BoxDecoration(boxShadow: BabelShadowLight.sm);
 ```
 
 ## What's exported
 
 `package:babel_design_tokens/babel_tokens.dart` (imports `flutter/widgets.dart`):
 
-- `BabelColors` — the theme-invariant color ramps (`brand50…brand900`, neutrals, status).
+- `BabelColors` — the theme-invariant color ramps (`brand50…brand900`, neutrals, status, `chart1…chart8`).
 - `BabelColorsLight` / `BabelColorsDark` — semantic roles per theme.
-- `BabelSpace` — the 4px spacing ladder. `BabelRadius` — corner radii. `BabelType` — type scale + families.
+- `BabelSpace` — the 4px spacing ladder (`s_0`, `spx`, `s_05`, `s_1` … `s_32`).
+- `BabelGap` — ladder gaps as `SizedBox`es (`h4` vertical, `w2` horizontal).
+- `BabelInsets` — ladder `EdgeInsets` (`a4` all, `h4` horizontal, `v4` vertical).
+- `BabelRole` — spacing roles: which rung a job uses (`padCard`, `gapPage`, `padCell`, …, `padPageFor(width)`).
+- `BabelSize` — control sizes (`controlH`).
+- `BabelRadius` — corner radii, including `pill` and `sheet`. `BabelBorder` — shared border widths (`hairline`, `accentRail`).
+- `BabelShadowLight` / `BabelShadowDark` — elevation `sm` / `md` / `lg` as `List<BoxShadow>`, per theme.
+- `BabelDuration` / `BabelEasing` — the motion ladder and exact curves. `BabelMotion` — motion roles, each a `BabelMotionRole` (`duration` + `curve`).
+- `BabelType` — type scale + families.
 
 `package:babel_design_tokens/babel_contracts.dart` (**pure Dart**, no Flutter —
 usable from a plain isolate and from tests with no binding):
@@ -80,6 +89,12 @@ keep a fallback member — `NotificationType.unknown` already does exactly this.
 
 ## Regenerate
 
-From the repo root: `npm run build` (writes `dart/lib/babel_tokens.dart` plus the
-CSS/JSON outputs). Bump `version` here and in the root `package.json` together, then
-tag the repo `vX.Y.Z` so both the npm and pub consumers can pin the same release.
+From the repo root: `npm run build` (writes `dart/lib/babel_tokens.dart` and
+`dart/lib/babel_contracts.dart` plus the CSS/JSON outputs). Bump `version` here and in
+the root `package.json` together, add the release to [`CHANGELOG.md`](./CHANGELOG.md),
+and commit. Then, on a clean checkout of the commit you will tag, run
+`VERIFY_STRICT=1 npm run verify` with Flutter on `PATH` (it analyzes both Dart files, and
+fails rather than warns if it could not), and tag that commit `vX.Y.Z` so both the npm
+and pub consumers can pin the same release. The
+[release steps](../README.md#editing-tokens--releasing) say why the pre-push hook does
+not stand in for this.
