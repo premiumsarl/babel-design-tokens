@@ -151,6 +151,8 @@ expectRefused('a length in em', shadow('4em 0 8px rgba(0,0,0,.5)'),
   'shadow.sm.light: "4em" is in em');
 expectRefused('an inset shadow', shadow('inset 0 1px 2px rgba(0,0,0,.5)'),
   'shadow.sm.light: "inset 0 1px 2px rgba(0,0,0,.5)" is not');
+expectRefused('a malformed alpha', shadow('0 4px 8px rgba(0,0,0,1.)'),
+  'shadow.sm.light: "0 4px 8px rgba(0,0,0,1.)" is not');
 
 /* ---- every generated name is public ---- */
 expectBuilds('a digit-leading shadow step', ({ tokens }) => {

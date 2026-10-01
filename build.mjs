@@ -253,7 +253,7 @@ const dartShadowLayers = (css, where) =>
   // Split on the commas BETWEEN layers, not the ones inside rgba(...).
   css.split(/,(?![^(]*\))/).map((raw) => {
     const layer = raw.trim();
-    const m = layer.match(/^((?:\S+\s+){2,4})rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/);
+    const m = layer.match(/^((?:\S+\s+){2,4})rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+(?:\.\d+)?|\.\d+)\s*\)$/);
     if (!m || /\binset\b/.test(layer)) {
       throw new Error(
         `${where}: "${layer}" is not "x y blur [spread] rgba(r, g, b, a)". `
