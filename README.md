@@ -258,6 +258,7 @@ npm run check:ratchet               # the ratchet's own scope test (fixtures)
 npm run verify                      # the whole gate (the pre-push hook runs it): build, drift,
                                     # contrast, contracts, Dart analyze, ratchet + codegen
                                     # self-tests, version + CHANGELOG
+VERIFY_STRICT=1 npm run verify      # the same, but a check it has to skip fails it (step 6)
 ```
 
 1. Edit `tokens.json` (alias with `{color.brand.500}`) and/or `contracts/*.json`.
@@ -265,7 +266,7 @@ npm run verify                      # the whole gate (the pre-push hook runs it)
 3. `npm run verify` — every gate above. Put Flutter on `PATH` first: without it the Dart step is skipped, and the warning names the file it did not analyze.
 4. Bump `version` in **both** `package.json` and `dart/pubspec.yaml` (keep them equal), and add a `## X.Y.Z` entry to `dart/CHANGELOG.md`. `verify` fails without one.
 5. Commit the sources, `dist/`, and `dart/lib/`.
-6. On a clean checkout of the exact commit being tagged (a fresh clone or `git worktree add`; for a merged PR, the merge commit on `main`), run `npm run verify` with Flutter on `PATH` and check that no line of its output says `SKIPPED` (verify still passes when it could not analyze a Dart file), then tag that commit `vX.Y.Z` so npm and pub consumers pin the same release. The pre-push hook does not stand in for this: it checks your working tree rather than the ref you push, `SKIP_VERIFY=1` skips it, and a merge made on GitHub runs no hook at all.
+6. On a clean checkout of the exact commit being tagged (a fresh clone or `git worktree add`; for a merged PR, the merge commit on `main`), run `VERIFY_STRICT=1 npm run verify` with Flutter on `PATH`, then tag that commit `vX.Y.Z` so npm and pub consumers pin the same release. Plain `npm run verify` still passes when it could not analyze a Dart file (it only warns `⚠ … SKIPPED`); `VERIFY_STRICT=1` makes that skip fail the run, so a pass means both Dart files were analyzed. The pre-push hook does not stand in for this: it checks your working tree rather than the ref you push, `SKIP_VERIFY=1` skips it, and a merge made on GitHub runs no hook at all.
 
 ### Vendored scripts
 

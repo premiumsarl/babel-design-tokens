@@ -3,7 +3,8 @@
 // COMMITTED but GENERATED, and consumers install straight from git, so this
 // is the only enforcement point. Runs from `npm run verify`, the pre-push
 // hook (.githooks/pre-push, installed by `npm install`), and README release
-// step 6 on a clean checkout of the commit being tagged. ~25s.
+// step 6, as `VERIFY_STRICT=1 npm run verify`, on a clean checkout of the
+// commit being tagged. ~25s.
 //
 //   1. regenerate from tokens.json + contracts/ and fail on drift
 //   2. WCAG contrast gate
@@ -14,7 +15,8 @@
 //      babel_tokens.dart under dart/pubspec.yaml (needs `flutter`). Packages
 //      resolve offline first. Whatever cannot run (no SDK, or no network and
 //      a cold pub cache) is SKIPPED with a warning naming the file, never
-//      silently
+//      silently; with VERIFY_STRICT set, verify fails at the end, naming
+//      every skip
 //   5. self-tests: the ratchet's scope, and the Dart codegen (shadow lengths,
 //      no private or reserved-word names)
 //   6. npm/pub version parity (package.json == dart/pubspec.yaml), and the
@@ -30,6 +32,18 @@ const run = (label, cmd, args, opts = {}) => {
   console.log(`\n▶ ${label}`);
   const r = spawnSync(cmd, args, { cwd: root, stdio: 'inherit', ...opts });
   if (r.status !== 0) { console.error(`✗ ${label}`); process.exit(r.status ?? 1); }
+};
+// VERIFY_STRICT=1 (any non-empty value, as with the hook's SKIP_VERIFY)
+// turns any SKIPPED below into a failure: every step still runs, and verify
+// then exits 1 naming each skip. Release step 6 runs verify this way:
+// otherwise a run that could not analyze a Dart file still exits 0, and the
+// one sign is a warning among ~100 lines of output.
+const strict = Boolean(process.env.VERIFY_STRICT);
+if (strict) console.log('VERIFY_STRICT is set: a check that has to be SKIPPED fails verify.');
+const skipped = [];
+const skip = (msg) => {
+  console.warn(`  ⚠ ${msg}`);
+  skipped.push(msg);
 };
 
 run('build from tokens.json + contracts/', 'node', ['build.mjs']);
@@ -79,7 +93,7 @@ const analyze = (file, pub, pubspec) => {
     const out = `${got.stdout ?? ''}${got.stderr ?? ''}${got.error ?? ''}`;
     process.stderr.write(out);
     if (unreachable.test(out)) {
-      console.warn(`  ⚠ pub.dev unreachable and the pub cache lacks what ${file} needs — SKIPPED: dart/lib/${file} was NOT analyzed. Run \`npm run verify\` once online to fill the cache.`);
+      skip(`pub.dev unreachable and the pub cache lacks what ${file} needs — SKIPPED: dart/lib/${file} was NOT analyzed. Run \`npm run verify\` once online to fill the cache.`);
       return null;
     }
     console.error(`✗ \`${pub} pub get\` could not resolve the packages dart/lib/${file} is analyzed against, from the pub cache or pub.dev (output above). The generated code itself was not analyzed.`);
@@ -91,12 +105,12 @@ const analyze = (file, pub, pubspec) => {
   return offline.status === 0 ? 'the pub cache' : 'pub.dev';
 };
 if (!onPath('dart')) {
-  console.warn('  ⚠ `dart` not on PATH — SKIPPED: NEITHER dart/lib/babel_tokens.dart NOR dart/lib/babel_contracts.dart was analyzed. Install Flutter (it ships `dart`) to run this step; a file that does not analyze is a build break in babel-mobile.');
+  skip('`dart` not on PATH — SKIPPED: NEITHER dart/lib/babel_tokens.dart NOR dart/lib/babel_contracts.dart was analyzed. Install Flutter (it ships `dart`) to run this step; a file that does not analyze is a build break in babel-mobile.');
 } else {
   const contractsFrom = analyze('babel_contracts.dart', 'dart', 'name: contracts_check\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\n');
   if (contractsFrom) console.log(`  analyzed babel_contracts.dart alone, with no dependencies (resolved from ${contractsFrom})`);
   if (!onPath('flutter')) {
-    console.warn('  ⚠ `flutter` not on PATH — SKIPPED: dart/lib/babel_tokens.dart was NOT analyzed (it imports flutter/widgets.dart). Install Flutter to check it.');
+    skip('`flutter` not on PATH — SKIPPED: dart/lib/babel_tokens.dart was NOT analyzed (it imports flutter/widgets.dart). Install Flutter to check it.');
   } else {
     const tokensFrom = analyze('babel_tokens.dart', 'flutter', readFileSync(join(root, 'dart/pubspec.yaml'), 'utf8'));
     if (tokensFrom) console.log(`  analyzed babel_tokens.dart under dart/pubspec.yaml (resolved from ${tokensFrom})`);
@@ -115,4 +129,10 @@ if (pkg !== (m && m[1])) { console.error(`✗ version mismatch: package.json ${p
 const changelog = readFileSync(join(root, 'dart/CHANGELOG.md'), 'utf8');
 if (!changelog.split('\n').some((l) => l.trim() === `## ${pkg}`)) { console.error(`✗ dart/CHANGELOG.md has no "## ${pkg}" entry — add one for this release`); process.exit(1); }
 console.log(`  ${pkg}`);
+if (strict && skipped.length) {
+  console.error(`\n✗ VERIFY_STRICT is set, and ${skipped.length} check(s) were SKIPPED, so this run cannot gate a release:\n`
+    + skipped.map((msg) => `  - ${msg}`).join('\n'));
+  process.exit(1);
+}
 console.log('\n✓ verify passed');
+if (skipped.length) console.warn(`  ⚠ but with ${skipped.length} check(s) SKIPPED (above), so this run cannot gate a release: release step 6 runs \`VERIFY_STRICT=1 npm run verify\`, which fails instead.`);

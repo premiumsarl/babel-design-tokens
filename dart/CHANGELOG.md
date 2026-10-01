@@ -23,7 +23,9 @@ commit history; this file had stopped at 0.2.0.
   link was dead inside `node_modules`).
 - Tooling (does not ship): `npm run verify` now analyzes `babel_tokens.dart` as
   well as `babel_contracts.dart`, names the file it could not check when an SDK
-  is missing, and fails a release that has no entry here.
+  is missing, and fails a release that has no entry here. With `VERIFY_STRICT=1`,
+  which the release steps use, a Dart file it could not analyze fails the run
+  instead of being skipped with a warning.
 
 ## 0.7.0
 - `radius.pill` = 40 (the CTA shape) and `radius.sheet` = 20 (the bottom-sheet
