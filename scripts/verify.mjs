@@ -86,6 +86,11 @@ const analyze = (file, pub, pubspec) => {
   mkdirSync(join(dir, 'lib'));
   copyFileSync(join(root, 'dart/lib', file), join(dir, 'lib', file));
   writeFileSync(join(dir, 'pubspec.yaml'), pubspec);
+  // dart analyze takes its options from the nearest analysis_options.yaml up
+  // from the package, so one in TMPDIR or above (on a shared /tmp, anyone's)
+  // could switch an error off. One here, with no options in it, ends that
+  // search: the generated code is held to the SDK defaults.
+  writeFileSync(join(dir, 'analysis_options.yaml'), '# SDK defaults only: stops dart analyze using an ancestor directory\'s options\n');
   const offline = spawnSync(pub, ['pub', 'get', '--offline'], { cwd: dir, encoding: 'utf8' });
   const got = offline.status === 0 ? offline : spawnSync(pub, ['pub', 'get'], { cwd: dir, encoding: 'utf8' });
   if (got.status !== 0) {
