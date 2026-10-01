@@ -650,7 +650,7 @@ ${dartSemantic('dark')}
 
 /// Spacing scale (logical px). One 4px-based ladder for the whole app.
 abstract final class BabelSpace {
-${Object.entries(tokens.space).map(([k, v]) => `  static const double s${dartName(k)} = ${Number(v).toFixed(1)};`).join('\n')}
+${Object.entries(tokens.space).map(([k, v]) => `  static const double s${dartName(k)} = ${dartDouble(Number(v))};`).join('\n')}
 }
 
 ${dartGaps()}
@@ -664,18 +664,18 @@ ${dartRoles()}
 abstract final class BabelSize {
 ${Object.entries(tokens.spaceRole)
   .filter(([k, v]) => typeof v === 'number')
-  .map(([k, v]) => `  static const double ${dartName(k)} = ${Number(v).toFixed(1)};`)
+  .map(([k, v]) => `  static const double ${dartName(k)} = ${dartDouble(Number(v))};`)
   .join('\n')}
 }
 
 /// Corner radii (logical px).
 abstract final class BabelRadius {
-${Object.entries(tokens.radius).map(([k, v]) => `  static const double ${dartName(k).replace(/^_/, 'r')} = ${Number(v).toFixed(1)};`).join('\n')}
+${Object.entries(tokens.radius).map(([k, v]) => `  static const double ${dartName(k).replace(/^_/, 'r')} = ${dartDouble(Number(v))};`).join('\n')}
 }
 
 /// Border widths shared across the products — see the border group in tokens.json.
 abstract final class BabelBorder {
-${Object.entries(tokens.border).map(([k, v]) => `  static const double ${dartName(k)} = ${Number(v).toFixed(1)};`).join('\n')}
+${Object.entries(tokens.border).map(([k, v]) => `  static const double ${dartName(k)} = ${dartDouble(Number(v))};`).join('\n')}
 }
 
 ${dartShadows('light')}
@@ -692,7 +692,7 @@ ${dartMotionRoles()}
 abstract final class BabelType {
   static const String display = 'Space Grotesk';
   static const String body = 'Inter';
-${Object.entries(tokens.font.size).map(([k, v]) => `  static const double size${dartName(k).replace(/^_/, 'S')} = ${Number(v).toFixed(1)};`).join('\n')}
+${Object.entries(tokens.font.size).map(([k, v]) => `  static const double size${dartName(k).replace(/^_/, 'S')} = ${dartDouble(Number(v))};`).join('\n')}
 }
 `;
 

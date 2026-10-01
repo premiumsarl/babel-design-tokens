@@ -3,7 +3,8 @@
  *
  * Each used to fail quietly. dartShadowLayers read `2 4 8` (invalid CSS, so
  * the web drew no shadow) as pixels, half-read `1.2.3px` as 1.2, rounded
- * 1.25px to 1.3, and passed a negative blur, which CSS drops and Flutter's
+ * 1.25px to 1.3 (as BabelBorder rounded a 0.75 width to 0.8), and passed a
+ * negative blur, which CSS drops and Flutter's
  * Shadow asserts against. dartShadows turned a `2xl` step into `_2xl`, a
  * member no app importing the file can reach, and a `default` key became
  * `static const double default`, which does not compile (a built-in word
@@ -153,6 +154,10 @@ expectRefused('an inset shadow', shadow('inset 0 1px 2px rgba(0,0,0,.5)'),
   'shadow.sm.light: "inset 0 1px 2px rgba(0,0,0,.5)" is not');
 expectRefused('a malformed alpha', shadow('0 4px 8px rgba(0,0,0,1.)'),
   'shadow.sm.light: "0 4px 8px rgba(0,0,0,1.)" is not');
+
+/* ---- every other Dart number crosses unrounded too ---- */
+expectBuilds('a fractional border width', ({ tokens }) => { tokens.border.hairline = 0.75; },
+  (dart) => (dart.includes('  static const double hairline = 0.75;') ? undefined : '0.75 must cross verbatim, not as 0.8'));
 
 /* ---- every generated name is public ---- */
 expectBuilds('a digit-leading shadow step', ({ tokens }) => {
