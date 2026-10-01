@@ -1,5 +1,6 @@
 /**
- * The Dart codegen's guards, pinned: shadow lengths, names and strings.
+ * The Dart codegen's guards, pinned: shadow lengths, numbers, curves, names
+ * and strings.
  *
  * Each used to fail quietly. dartShadowLayers read `2 4 8` (invalid CSS, so
  * the web drew no shadow) as pixels, half-read `1.2.3px` as 1.2, rounded
@@ -167,6 +168,16 @@ expectRefused('a size written as a string', ({ tokens }) => { tokens.radius.md =
 expectRefused('a fractional duration', ({ tokens }) => { tokens.duration.fast = 150.5; },
   'duration.fast is 150.5, not a whole number');
 
+/* ---- an easing curve crosses exactly, or is refused by name ---- */
+expectBuilds('a curve with three decimals', ({ tokens }) => {
+  tokens.easing.easeOutCubic = 'cubic-bezier(0.215, 0.61, 0.355, 1)';
+}, (dart) => (dart.includes('  static const Curve easeOutCubic = Cubic(0.215, 0.61, 0.355, 1.00);') ? undefined
+  : `0.215 and 0.355 must cross verbatim, not as 0.21 and 0.35:\n${classBody(dart, 'BabelEasing')}`));
+expectRefused('a curve x outside 0..1', ({ tokens }) => { tokens.easing.spring = 'cubic-bezier(1.2, 0, 0.2, 1)'; },
+  'easing.spring: "cubic-bezier(1.2, 0, 0.2, 1)" has an x outside 0..1');
+expectRefused('a malformed curve number', ({ tokens }) => { tokens.easing.spring = 'cubic-bezier(0.2.1, 0, 0.2, 1)'; },
+  'easing.spring: "cubic-bezier(0.2.1, 0, 0.2, 1)" is neither linear nor cubic-bezier()');
+
 /* ---- every generated name is public ---- */
 expectBuilds('a digit-leading shadow step', ({ tokens }) => {
   tokens.shadow = { ...SHADOWS_0_8_0, '2xl': SHADOWS_0_8_0.lg };
@@ -206,4 +217,4 @@ if (failures.length) {
   console.error(`✗ Dart codegen: ${failures.length} case(s) failed\n\n` + failures.join('\n\n'));
   process.exit(1);
 }
-console.log('✓ Dart codegen: shadow lengths cross exactly or fail by name; no generated name is private or a reserved word; a $ stays text.');
+console.log('✓ Dart codegen: shadow lengths and curves cross exactly or fail by name, sizes and durations are numbers; no generated name is private or a reserved word; a $ stays text.');

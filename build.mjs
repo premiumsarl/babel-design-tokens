@@ -196,12 +196,27 @@ const motionRoleValue = (name, role) => {
  * Cubic(0.42, 0, 0.58, 1) — near the Material standard curve, not equal to
  * it. That gap is exactly the drift this token set exists to remove.)
  * `linear` has no bezier spelling and maps to the built-in.
+ *
+ * So every number crosses as written, never rounded (`0.215` stays 0.215,
+ * where `toFixed(2)` made it 0.21), and one with at most two decimals keeps
+ * them (`0.40`, `1.00`). Anything else fails the build by name, as a shadow
+ * does: a malformed number (`0.2.1`) would half-parse into a different
+ * curve, and an x outside 0..1 is invalid CSS, so the web would drop the
+ * whole transition while Flutter animated.
  */
-const dartCurve = (css) => {
+const dartCurve = (css, where = 'easing') => {
   if (css === 'linear') return 'Curves.linear';
-  const m = css.match(/^cubic-bezier\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)$/);
-  if (!m) throw new Error(`easing value is neither linear nor cubic-bezier(): ${css}`);
-  return `Cubic(${m.slice(1).map((n) => Number(n).toFixed(2)).join(', ')})`;
+  const num = '\\s*(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))\\s*';
+  const m = typeof css === 'string' && css.match(new RegExp(`^cubic-bezier\\(${num},${num},${num},${num}\\)$`));
+  if (!m) throw new Error(`${where}: "${css}" is neither linear nor cubic-bezier() of four well-formed numbers.`);
+  const [x1, y1, x2, y2] = m.slice(1).map(Number);
+  if ([x1, x2].some((x) => x < 0 || x > 1)) {
+    throw new Error(
+      `${where}: "${css}" has an x outside 0..1, which CSS rejects: the browser would drop `
+      + `the whole transition while Flutter animated. x1 and x2 must be from 0 to 1.`,
+    );
+  }
+  return `Cubic(${[x1, y1, x2, y2].map((n) => (Number(n.toFixed(2)) === n ? n.toFixed(2) : String(n))).join(', ')})`;
 };
 
 /* ---------- shadow emit helpers ---------- */
@@ -630,7 +645,7 @@ function dartEasings() {
              '/// on the web, instead of a visually-close approximation.',
              'abstract final class BabelEasing {'];
   for (const [k, v] of Object.entries(tokens.easing))
-    L.push(`  static const Curve ${dartName(k)} = ${dartCurve(v)};`);
+    L.push(`  static const Curve ${dartName(k)} = ${dartCurve(v, `easing.${k}`)};`);
   L.push('}');
   return L.join('\n');
 }
