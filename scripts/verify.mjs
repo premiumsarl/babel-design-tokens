@@ -7,11 +7,15 @@
 //   1. regenerate from tokens.json + contracts/ and fail on drift
 //   2. WCAG contrast gate
 //   3. contract invariants (also re-asserts freshness via build.mjs --check)
-//   4. the generated Dart analyzes — babel_tokens.dart AND babel_contracts.dart
-//      (needs `flutter` on PATH for the tokens file, `dart` for the contracts;
-//      whatever cannot run is SKIPPED with a warning naming the file, never
-//      silently)
-//   5. ratchet scope self-test
+//   4. the generated Dart analyzes, infos included (--fatal-infos):
+//      babel_contracts.dart alone with no dependencies, as it is pure Dart
+//      (needs `dart`; a no-Flutter-import text check runs regardless), and
+//      babel_tokens.dart under dart/pubspec.yaml (needs `flutter`). Packages
+//      resolve offline first. Whatever cannot run (no SDK, or no network and
+//      a cold pub cache) is SKIPPED with a warning naming the file, never
+//      silently
+//   5. self-tests: the ratchet's scope, and the Dart codegen (shadow lengths,
+//      no private or reserved-word names)
 //   6. npm/pub version parity (package.json == dart/pubspec.yaml), and the
 //      version has a dart/CHANGELOG.md entry
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -40,35 +44,66 @@ console.log('  in sync');
 run('WCAG contrast gate', 'node', ['scripts/check-contrast.mjs']);
 run('contract integrity gate', 'node', ['scripts/check-contracts.mjs']);
 
-// Both generated files. This used to copy babel_contracts.dart alone, so
-// babel_tokens.dart — the file babel-mobile imports everywhere — was analyzed
-// by nothing here, and a broken emit surfaced only after a consumer bumped
-// its pin. It imports flutter/widgets.dart, so it needs the Flutter SDK.
-console.log('\n▶ generated Dart analyzes (babel_tokens.dart + babel_contracts.dart)');
+// Each generated file in a scratch package of its own, under the pubspec it
+// promises to work with. babel_contracts.dart is documented as pure Dart, so
+// it goes alone under one with no dependencies: next to Flutter, a Flutter
+// import it USED would resolve and pass. babel_tokens.dart, the file
+// babel-mobile imports everywhere (analyzed by nothing here before 0.8.0),
+// imports flutter/widgets.dart, so it goes under dart/pubspec.yaml and needs
+// the Flutter SDK. --fatal-infos: plain `dart analyze` exits 0 on an info,
+// and deprecated_member_use is how a Flutter API removal announces itself.
+console.log('\n▶ generated Dart analyzes (babel_contracts.dart as pure Dart, babel_tokens.dart under Flutter)');
+const pureDart = 'dart/lib/babel_contracts.dart';
+const flutterImport = readFileSync(join(root, pureDart), 'utf8').split('\n')
+  .find((l) => /^\s*(?:import|export)\s+['"](?:package:flutter\w*\/|dart:ui(?:_web)?['"])/.test(l));
+if (flutterImport) { console.error(`✗ ${pureDart} must stay pure Dart (see its header), but has: ${flutterImport.trim()}`); process.exit(1); }
+console.log(`  ${pureDart} imports neither Flutter nor dart:ui`);
 const onPath = (bin) => !spawnSync(bin, ['--version'], { stdio: 'ignore' }).error;
+// pub's words for "could not reach the server". Any other failure to resolve
+// fails the step, so a wording this does not know fails closed.
+const unreachable = /socket error|SocketException|Failed host lookup|Connection (?:refused|reset|closed|timed out)|Network is unreachable|TLS error|HandshakeException/i;
+// Resolve, then analyze. Offline first: the pub cache nearly always has the
+// packages, and a push without a network should still check the file.
+// Returns where the packages came from, or null when the file was SKIPPED.
+const analyze = (file, pub, pubspec) => {
+  const dir = mkdtempSync(join(tmpdir(), 'dartcheck-'));
+  const cleanup = () => rmSync(dir, { recursive: true, force: true });
+  mkdirSync(join(dir, 'lib'));
+  copyFileSync(join(root, 'dart/lib', file), join(dir, 'lib', file));
+  writeFileSync(join(dir, 'pubspec.yaml'), pubspec);
+  const offline = spawnSync(pub, ['pub', 'get', '--offline'], { cwd: dir, encoding: 'utf8' });
+  const got = offline.status === 0 ? offline : spawnSync(pub, ['pub', 'get'], { cwd: dir, encoding: 'utf8' });
+  if (got.status !== 0) {
+    cleanup();
+    const out = `${got.stdout ?? ''}${got.stderr ?? ''}${got.error ?? ''}`;
+    process.stderr.write(out);
+    if (unreachable.test(out)) {
+      console.warn(`  ⚠ pub.dev unreachable and the pub cache lacks what ${file} needs — SKIPPED: dart/lib/${file} was NOT analyzed. Run \`npm run verify\` once online to fill the cache.`);
+      return null;
+    }
+    console.error(`✗ \`${pub} pub get\` could not resolve the packages dart/lib/${file} is analyzed against, from the pub cache or pub.dev (output above). The generated code itself was not analyzed.`);
+    process.exit(1);
+  }
+  const r = spawnSync('dart', ['analyze', '--fatal-infos'], { cwd: dir, stdio: 'inherit' });
+  cleanup();
+  if (r.status !== 0) { console.error(`✗ generated Dart does not analyze (dart/lib/${file})`); process.exit(1); }
+  return offline.status === 0 ? 'the pub cache' : 'pub.dev';
+};
 if (!onPath('dart')) {
   console.warn('  ⚠ `dart` not on PATH — SKIPPED: NEITHER dart/lib/babel_tokens.dart NOR dart/lib/babel_contracts.dart was analyzed. Install Flutter (it ships `dart`) to run this step; a file that does not analyze is a build break in babel-mobile.');
 } else {
-  const flutter = onPath('flutter');
-  const files = flutter ? ['babel_tokens.dart', 'babel_contracts.dart'] : ['babel_contracts.dart'];
-  const dir = mkdtempSync(join(tmpdir(), 'dartcheck-'));
-  mkdirSync(join(dir, 'lib'));
-  for (const f of files) copyFileSync(join(root, 'dart/lib', f), join(dir, 'lib', f));
-  // With Flutter, the package's own pubspec: the check then resolves what a
-  // consumer resolves. Without it, a pure-Dart one that only the contracts fit.
-  writeFileSync(join(dir, 'pubspec.yaml'), flutter
-    ? readFileSync(join(root, 'dart/pubspec.yaml'), 'utf8')
-    : 'name: contracts_check\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\n');
-  for (const [cmd, args] of [[flutter ? 'flutter' : 'dart', ['pub', 'get']], ['dart', ['analyze']]]) {
-    const r = spawnSync(cmd, args, { cwd: dir, stdio: 'inherit' });
-    if (r.status !== 0) { rmSync(dir, { recursive: true, force: true }); console.error(`✗ generated Dart does not analyze (${files.join(', ')})`); process.exit(1); }
+  const contractsFrom = analyze('babel_contracts.dart', 'dart', 'name: contracts_check\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\n');
+  if (contractsFrom) console.log(`  analyzed babel_contracts.dart alone, with no dependencies (resolved from ${contractsFrom})`);
+  if (!onPath('flutter')) {
+    console.warn('  ⚠ `flutter` not on PATH — SKIPPED: dart/lib/babel_tokens.dart was NOT analyzed (it imports flutter/widgets.dart). Install Flutter to check it.');
+  } else {
+    const tokensFrom = analyze('babel_tokens.dart', 'flutter', readFileSync(join(root, 'dart/pubspec.yaml'), 'utf8'));
+    if (tokensFrom) console.log(`  analyzed babel_tokens.dart under dart/pubspec.yaml (resolved from ${tokensFrom})`);
   }
-  rmSync(dir, { recursive: true, force: true });
-  if (flutter) console.log(`  analyzed ${files.join(' + ')}`);
-  else console.warn('  ⚠ `flutter` not on PATH — dart/lib/babel_tokens.dart was NOT analyzed (it imports flutter/widgets.dart); only babel_contracts.dart was. Install Flutter to check both.');
 }
 
 run('ratchet scope (test files excluded, real literals counted)', 'node', ['scripts/__tests__/ratchet-scope.test.mjs']);
+run('Dart codegen (shadow lengths exact or refused, no private or reserved-word names)', 'node', ['scripts/__tests__/dart-codegen.test.mjs']);
 
 console.log('\n▶ version parity (package.json == dart/pubspec.yaml) + CHANGELOG entry');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;

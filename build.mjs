@@ -207,6 +207,30 @@ const dartCurve = (css) => {
 /* ---------- shadow emit helpers ---------- */
 
 /**
+ * One shadow length as logical pixels: a px value or a bare 0, nothing else.
+ * A unitless non-zero number is invalid CSS, so the browser drops the whole
+ * --shadow-* declaration and the web would show no shadow while Flutter drew
+ * one. A unitless zero is valid however it is spelled (`0`, `0.0`, `-0`):
+ * browsers test the number's value, not its text, and so does this. em/rem/%
+ * have no fixed pixel value to carry. A malformed number (`1.2.3px`) would
+ * half-parse into a different length.
+ */
+const dartShadowLength = (len, where) => {
+  const m = len.match(/^(-?(?:\d+(?:\.\d+)?|\.\d+))([a-zA-Z%]*)$/);
+  if (m && !m[2] && Number(m[1]) === 0) return 0;
+  if (m && m[2].toLowerCase() === 'px') return Number(m[1]);
+  throw new Error(
+    `${where}: "${len}" ${!m ? 'is not a well-formed number'
+      : !m[2] ? 'has no unit, which CSS allows only for 0: the browser would drop the whole shadow while Dart drew it'
+        : `is in ${m[2]}, which has no fixed pixel value`}. `
+    + 'A shadow length is a px value or a bare 0.',
+  );
+};
+
+/** A Dart double literal, never rounded: 16 → `16.0`, 1.25 → `1.25`. */
+const dartDouble = (n) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
+
+/**
  * A CSS box-shadow value as Dart `BoxShadow(...)` expressions, one per layer.
  *
  * Until v0.8.0 the shadow group was CSS-only, so mobile had no shadow token to
@@ -214,33 +238,44 @@ const dartCurve = (css) => {
  * accepted — `x y blur [spread] rgba(r,g,b,a)` per layer, comma-separated —
  * and anything else fails the build by name, as dartCurve does: a half-parsed
  * shadow would be a different token wearing this one's name. `inset` has no
- * BoxShadow equivalent and is refused for the same reason.
+ * BoxShadow equivalent and is refused for the same reason, and so is any
+ * length dartShadowLength cannot carry exactly. So is a negative blur: CSS
+ * rejects one, so the browser drops the whole shadow, and Flutter's Shadow
+ * asserts blurRadius >= 0, which in a const is a compile error.
  *
- * Numbers cross verbatim (a 16px blur is `blurRadius: 16.0`), so the Dart
- * reads the same as tokens.json. That is the usual mapping, not a pixel-exact
- * one: CSS blurs with sigma = blur / 2 and Flutter with 0.57735 * blurRadius
- * + 0.5, so the Flutter shadow is slightly softer at the same number.
+ * Numbers cross verbatim (a 16px blur is `blurRadius: 16.0`, a 1.25px offset
+ * is `1.25`, never rounded), so the Dart reads the same as tokens.json. That
+ * is the usual mapping, not a pixel-exact one: CSS blurs with sigma = blur / 2
+ * and Flutter with 0.57735 * blurRadius + 0.5, so the Flutter shadow is
+ * slightly softer at the same number.
  */
 const dartShadowLayers = (css, where) =>
   // Split on the commas BETWEEN layers, not the ones inside rgba(...).
   css.split(/,(?![^(]*\))/).map((raw) => {
     const layer = raw.trim();
-    const m = layer.match(/^((?:-?[\d.]+(?:px)?\s+){2,4})rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/);
-    if (!m) {
+    const m = layer.match(/^((?:\S+\s+){2,4})rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/);
+    if (!m || /\binset\b/.test(layer)) {
       throw new Error(
         `${where}: "${layer}" is not "x y blur [spread] rgba(r, g, b, a)". `
         + `Extend dartShadowLayers in build.mjs rather than approximating it in Dart.`,
       );
     }
-    const [x, y, blur = 0, spread = 0] = m[1].trim().split(/\s+/).map((n) => Number.parseFloat(n));
+    const lengths = m[1].trim().split(/\s+/);
+    const [x, y, blur = 0, spread = 0] = lengths.map((n) => dartShadowLength(n, where));
+    if (blur < 0) {
+      throw new Error(
+        `${where}: blur "${lengths[2]}" is negative, which CSS rejects (the browser drops `
+        + `the whole shadow) and Flutter's Shadow asserts against. A blur is 0 or more.`,
+      );
+    }
     const [r, g, b] = m.slice(2, 5).map(Number);
     const a = Number(m[5]);
-    if ([x, y, blur, spread, a].some(Number.isNaN) || a > 1 || [r, g, b].some((c) => c > 255)) {
+    if (Number.isNaN(a) || a > 1 || [r, g, b].some((c) => c > 255)) {
       throw new Error(`${where}: "${layer}" has an out-of-range number.`);
     }
     return `BoxShadow(color: Color.fromRGBO(${r}, ${g}, ${b}, ${a}), `
-      + `offset: Offset(${x.toFixed(1)}, ${y.toFixed(1)}), `
-      + `blurRadius: ${blur.toFixed(1)}, spreadRadius: ${spread.toFixed(1)})`;
+      + `offset: Offset(${dartDouble(x)}, ${dartDouble(y)}), `
+      + `blurRadius: ${dartDouble(blur)}, spreadRadius: ${dartDouble(spread)})`;
   });
 
 /* ---------- CSS ---------- */
@@ -409,7 +444,8 @@ function dartSemantic(theme) {
 /* Elevation per theme — the same --shadow-* ramp semanticCss emits. Named
    BabelShadowLight/Dark after BabelColorsLight/Dark: in this file a bare
    `Babel<Thing>` class is theme-invariant, and these are not — the light
-   arm's warm tint vanishes on a dark surface. */
+   arm's warm tint vanishes on a dark surface. A digit-leading step gets a
+   letter, as BabelRadius.r2xl does: dartName's `_2xl` would be private. */
 function dartShadows(theme) {
   const Theme = theme[0].toUpperCase() + theme.slice(1);
   const L = [];
@@ -419,7 +455,7 @@ function dartShadows(theme) {
   for (const [name, pair] of Object.entries(tokens.shadow)) {
     if (typeof pair?.[theme] !== 'string')
       throw new Error(`shadow.${name} has no ${theme} value; every step needs both themes.`);
-    L.push(`  static const List<BoxShadow> ${dartName(name)} = <BoxShadow>[`);
+    L.push(`  static const List<BoxShadow> ${dartName(name).replace(/^_/, 's')} = <BoxShadow>[`);
     for (const layer of dartShadowLayers(pair[theme], `shadow.${name}.${theme}`))
       L.push(`    ${layer},`);
     L.push('  ];');
@@ -948,6 +984,21 @@ const DART_RESERVED = new Set([
   'with', 'yield',
 ]);
 const dartId = (s) => (DART_RESERVED.has(s) ? `${s}_` : s);
+/**
+ * The names a generated member cannot take, which is fewer than DART_RESERVED
+ * above: that set also holds the built-in and contextual identifiers (`show`,
+ * `on`, `get`, `set`, ...), and those are legal member names. These 33
+ * reserved words do not compile as one. `await` and `yield` do, but are
+ * reserved inside an async function or a generator, so no such function in
+ * an app could read the member.
+ */
+const DART_RESERVED_WORDS = new Set([
+  'assert', 'break', 'case', 'catch', 'class', 'const', 'continue', 'default', 'do',
+  'else', 'enum', 'extends', 'false', 'final', 'finally', 'for', 'if', 'in', 'is',
+  'new', 'null', 'rethrow', 'return', 'super', 'switch', 'this', 'throw', 'true',
+  'try', 'var', 'void', 'while', 'with',
+]);
+const DART_ASYNC_RESERVED = new Set(['await', 'yield']);
 const dartStr = (s) => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 const dartList = (arr, indent = '  ') =>
   arr.length === 0
@@ -1079,6 +1130,53 @@ String? resolveContractValue(
   return onUnknown == 'preserve' ? value : null;
 }
 `;
+
+/* ---------- the generated Dart is all public ----------
+   A leading underscore makes a Dart name library-private, and dartName gives
+   one to every digit-leading key (`2xl` → `_2xl`) for the emitter to swap
+   for a letter (BabelRadius.r2xl, BabelType.sizeS2xl, BabelShadowLight.s2xl).
+   An emitter that forgets still builds, ships `--<group>-2xl` to the web, and
+   hands Flutter a member no importer can reach. So the emitted source is
+   scanned rather than each emitter trusted to remember: every group, one
+   added later included, fails here by name. Comments and string literals are
+   skipped; only code is API.
+   A key that is a Dart reserved word is refused the same way. dartName
+   passes `default` through, so `radius.default` emitted `static const
+   double default`, which does not compile, and only `dart analyze` under
+   Flutter saw it. It is refused rather than suffixed as dartId does, because
+   dartName's result is also spliced into longer names (`s_4`, `sizelg`)
+   where a suffix would rename a legal one. A built-in identifier such as
+   `show` or `on` is a legal member name and passes (DART_RESERVED_WORDS). */
+const assertDartPublic = (source, file) => {
+  let owner = '';
+  source.split('\n').forEach((line, i) => {
+    const code = line.replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/g, "''").replace(/\/\/.*/, '');
+    const priv = code.match(/(?<![\w$])_[\w$]*/);
+    if (priv) {
+      throw new Error(
+        `${file}:${i + 1}: \`${owner}${priv[0]}\` would be library-private, so no app `
+        + `importing ${file} could use it. Rename the source key, or have its emitter `
+        + `put a letter first, as BabelRadius does for 2xl (r2xl).\n    ${line.trim()}`,
+      );
+    }
+    const decl = code.match(/\bstatic\s+const\s+.+?\s(\w+)\s*=/);
+    if (decl && (DART_RESERVED_WORDS.has(decl[1]) || DART_ASYNC_RESERVED.has(decl[1]))) {
+      throw new Error(
+        `${file}:${i + 1}: \`${owner}${decl[1]}\` is a Dart reserved word: `
+        + (DART_ASYNC_RESERVED.has(decl[1])
+          ? `it compiles as a name, but no async function or generator could read it`
+          : `a reserved word such as \`default\` or \`in\` does not compile as a name`)
+        + ` (the contracts emitter suffixes them, as \`default_\`). Rename the `
+        + `source key.\n    ${line.trim()}`,
+      );
+    }
+    const cls = code.match(/\bclass\s+(\w+)/);
+    if (cls) owner = `${cls[1]}.`;
+    else if (line.startsWith('}')) owner = '';
+  });
+};
+assertDartPublic(dart, 'babel_tokens.dart');
+assertDartPublic(contractsDart, 'babel_contracts.dart');
 
 /* ---------- write (or, with --check, compare) ---------- */
 const DART_LIB = join(ROOT, 'dart', 'lib');

@@ -6,7 +6,7 @@
 # (package.json `prepare` sets core.hooksPath); the package has no
 # dependencies, so `npm install` is only ever run for this.
 #
-#   npm run verify           build → drift → contrast → contracts → dart → ratchet → parity (~25s)
+#   npm run verify           build → drift → contrast → contracts → dart → ratchet → codegen → parity (~25s)
 #   SKIP_VERIFY=1 git push   skip (emergencies)
 [ -n "$SKIP_VERIFY" ] && { echo "pre-push: SKIPPED (SKIP_VERIFY set)"; exit 0; }
 echo "pre-push: npm run verify (SKIP_VERIFY=1 to skip)"

@@ -256,7 +256,8 @@ npm run build:check                 # compare the committed output instead of wr
 npm run check -- ./path/to/src      # count raw color literals vs a baseline
 npm run check:ratchet               # the ratchet's own scope test (fixtures)
 npm run verify                      # the whole gate (the pre-push hook runs it): build, drift,
-                                    # contrast, contracts, Dart analyze, ratchet, version + CHANGELOG
+                                    # contrast, contracts, Dart analyze, ratchet + codegen
+                                    # self-tests, version + CHANGELOG
 ```
 
 1. Edit `tokens.json` (alias with `{color.brand.500}`) and/or `contracts/*.json`.
