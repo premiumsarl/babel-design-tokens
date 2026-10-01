@@ -999,7 +999,12 @@ const DART_RESERVED_WORDS = new Set([
   'try', 'var', 'void', 'while', 'with',
 ]);
 const DART_ASYNC_RESERVED = new Set(['await', 'yield']);
-const dartStr = (s) => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+/**
+ * A Dart string literal. `$` is escaped as well as `\` and `'`: bare, it
+ * interpolates, so an alias key `$onUnknown` would read the class's own
+ * onUnknown in Dart while dist kept the literal text.
+ */
+const dartStr = (s) => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\$/g, '\\$')}'`;
 const dartList = (arr, indent = '  ') =>
   arr.length === 0
     ? '<String>[]'
