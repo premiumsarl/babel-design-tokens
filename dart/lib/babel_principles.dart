@@ -13,6 +13,10 @@ abstract final class BabelPrinciples {
   static const List<String> scopes = <String>[
     'common',
     'babel',
+    'cutsheet',
+    'didactikos',
+    'pantry',
+    'rendee',
   ];
 
   /// Rule ID → its scope.
@@ -85,6 +89,24 @@ abstract final class BabelPrinciples {
     'BABEL-HAPTIC-1': 'babel',
     'BABEL-CONFIRM-1': 'babel',
     'BABEL-DONE-1': 'babel',
+    'CUTSHEET-ID-1': 'cutsheet',
+    'CUTSHEET-ID-2': 'cutsheet',
+    'CUTSHEET-LANG-1': 'cutsheet',
+    'DIDACTIKOS-ID-1': 'didactikos',
+    'DIDACTIKOS-ID-2': 'didactikos',
+    'DIDACTIKOS-DEVICE-1': 'didactikos',
+    'DIDACTIKOS-LANG-1': 'didactikos',
+    'DIDACTIKOS-LEGAL-1': 'didactikos',
+    'DIDACTIKOS-MONEY-1': 'didactikos',
+    'PANTRY-ID-1': 'pantry',
+    'PANTRY-ID-2': 'pantry',
+    'PANTRY-ID-3': 'pantry',
+    'PANTRY-LANG-1': 'pantry',
+    'RENDEE-ID-1': 'rendee',
+    'RENDEE-ID-2': 'rendee',
+    'RENDEE-ID-3': 'rendee',
+    'RENDEE-LANG-1': 'rendee',
+    'RENDEE-TRUTH-1': 'rendee',
   };
 
   /// Rule ID → its title.
@@ -157,5 +179,23 @@ abstract final class BabelPrinciples {
     'BABEL-HAPTIC-1': 'Five vibration tiers on mobile',
     'BABEL-CONFIRM-1': 'What counts as destructive in Babel',
     'BABEL-DONE-1': 'Smoke on dev, as the approved seats only',
+    'CUTSHEET-ID-1': 'Burgundy and gold',
+    'CUTSHEET-ID-2': 'Light, dark or system, chosen by the user',
+    'CUTSHEET-LANG-1': 'Four locales',
+    'DIDACTIKOS-ID-1': 'A brown brand, split into fill and ink',
+    'DIDACTIKOS-ID-2': 'Typefaces',
+    'DIDACTIKOS-DEVICE-1': 'Phone width is a real surface',
+    'DIDACTIKOS-LANG-1': 'English and French',
+    'DIDACTIKOS-LEGAL-1': 'Never default a currency',
+    'DIDACTIKOS-MONEY-1': 'A publisher\'s currency change is refused while orders would break',
+    'PANTRY-ID-1': '"Paper": monochrome, with colour only for status',
+    'PANTRY-ID-2': 'Status colours name a food\'s state',
+    'PANTRY-ID-3': 'Typeface and theme',
+    'PANTRY-LANG-1': 'Four locales',
+    'RENDEE-ID-1': 'Customers see the business\'s brand, never Rendee\'s',
+    'RENDEE-ID-2': 'The admin is Rendee\'s own surface',
+    'RENDEE-ID-3': 'A tenant\'s brand colour must pass contrast',
+    'RENDEE-LANG-1': 'Each tenant site sets its own locales',
+    'RENDEE-TRUTH-1': 'Money maths lives only in the core package',
   };
 }

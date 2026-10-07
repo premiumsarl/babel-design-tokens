@@ -7,8 +7,9 @@ commit history; this file had stopped at 0.2.0.
 
 ## 0.8.0
 - **UX principles.** New `principles/` folder: `COMMON.md` holds the rules every
-  Premium SARL brand follows, and one file per brand sits beside it
-  (`BABEL.md` first). Each rule has a stable ID (`FOCUS-1`, `BABEL-ID-1`).
+  Premium SARL brand follows, and one file per brand sits beside it:
+  `BABEL.md`, `CUTSHEET.md`, `DIDACTIKOS.md`, `PANTRY.md`, `RENDEE.md`. Each
+  rule has a stable ID (`FOCUS-1`, `BABEL-ID-1`).
   The build emits an index of those IDs: `dist/principles.json` (npm export
   `./principles.json`) and `lib/babel_principles.dart` (`BabelPrinciples`,
   pure Dart). Apps check the IDs their design docs cite against it. The

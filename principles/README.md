@@ -6,7 +6,15 @@ share, and one file per brand next to them (owner decision, 2026-10-07).
 | File | Holds |
 | --- | --- |
 | [COMMON.md](./COMMON.md) | The rules every brand follows, on every surface |
-| [BABEL.md](./BABEL.md) | Babel: identity, measurements and its own rulings |
+| [BABEL.md](./BABEL.md) | Babel: condo and HOA management (admin panel, mobile app, website) |
+| [CUTSHEET.md](./CUTSHEET.md) | Cutsheet: B2B meat and produce distribution (admin web app) |
+| [DIDACTIKOS.md](./DIDACTIKOS.md) | Didactikos: digital textbooks (web, used on desktop and phones) |
+| [PANTRY.md](./PANTRY.md) | Panora (PantryAI): household pantry (native mobile app) |
+| [RENDEE.md](./RENDEE.md) | Rendee (formerly SlotBase): white-label booking (admin, tenant sites, mobile app) |
+
+Only Babel's apps check their docs against these rules today (see "How apps
+use them"). The other brands read their file here; each lists the open
+questions its rules are waiting on.
 
 ## What a brand file holds
 

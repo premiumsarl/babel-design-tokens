@@ -2,7 +2,11 @@
   "$comment": "GENERATED from principles/*.md by build.mjs. Do not edit. common = every brand; any other scope is one brand.",
   "scopes": [
     "common",
-    "babel"
+    "babel",
+    "cutsheet",
+    "didactikos",
+    "pantry",
+    "rendee"
   ],
   "principles": {
     "FOCUS-1": {
@@ -344,6 +348,96 @@
       "title": "Smoke on dev, as the approved seats only",
       "scope": "babel",
       "file": "principles/BABEL.md"
+    },
+    "CUTSHEET-ID-1": {
+      "title": "Burgundy and gold",
+      "scope": "cutsheet",
+      "file": "principles/CUTSHEET.md"
+    },
+    "CUTSHEET-ID-2": {
+      "title": "Light, dark or system, chosen by the user",
+      "scope": "cutsheet",
+      "file": "principles/CUTSHEET.md"
+    },
+    "CUTSHEET-LANG-1": {
+      "title": "Four locales",
+      "scope": "cutsheet",
+      "file": "principles/CUTSHEET.md"
+    },
+    "DIDACTIKOS-ID-1": {
+      "title": "A brown brand, split into fill and ink",
+      "scope": "didactikos",
+      "file": "principles/DIDACTIKOS.md"
+    },
+    "DIDACTIKOS-ID-2": {
+      "title": "Typefaces",
+      "scope": "didactikos",
+      "file": "principles/DIDACTIKOS.md"
+    },
+    "DIDACTIKOS-DEVICE-1": {
+      "title": "Phone width is a real surface",
+      "scope": "didactikos",
+      "file": "principles/DIDACTIKOS.md"
+    },
+    "DIDACTIKOS-LANG-1": {
+      "title": "English and French",
+      "scope": "didactikos",
+      "file": "principles/DIDACTIKOS.md"
+    },
+    "DIDACTIKOS-LEGAL-1": {
+      "title": "Never default a currency",
+      "scope": "didactikos",
+      "file": "principles/DIDACTIKOS.md"
+    },
+    "DIDACTIKOS-MONEY-1": {
+      "title": "A publisher's currency change is refused while orders would break",
+      "scope": "didactikos",
+      "file": "principles/DIDACTIKOS.md"
+    },
+    "PANTRY-ID-1": {
+      "title": "\"Paper\": monochrome, with colour only for status",
+      "scope": "pantry",
+      "file": "principles/PANTRY.md"
+    },
+    "PANTRY-ID-2": {
+      "title": "Status colours name a food's state",
+      "scope": "pantry",
+      "file": "principles/PANTRY.md"
+    },
+    "PANTRY-ID-3": {
+      "title": "Typeface and theme",
+      "scope": "pantry",
+      "file": "principles/PANTRY.md"
+    },
+    "PANTRY-LANG-1": {
+      "title": "Four locales",
+      "scope": "pantry",
+      "file": "principles/PANTRY.md"
+    },
+    "RENDEE-ID-1": {
+      "title": "Customers see the business's brand, never Rendee's",
+      "scope": "rendee",
+      "file": "principles/RENDEE.md"
+    },
+    "RENDEE-ID-2": {
+      "title": "The admin is Rendee's own surface",
+      "scope": "rendee",
+      "file": "principles/RENDEE.md"
+    },
+    "RENDEE-ID-3": {
+      "title": "A tenant's brand colour must pass contrast",
+      "scope": "rendee",
+      "file": "principles/RENDEE.md"
+    },
+    "RENDEE-LANG-1": {
+      "title": "Each tenant site sets its own locales",
+      "scope": "rendee",
+      "file": "principles/RENDEE.md"
+    },
+    "RENDEE-TRUTH-1": {
+      "title": "Money maths lives only in the core package",
+      "scope": "rendee",
+      "file": "principles/RENDEE.md"
     }
   }
 }
