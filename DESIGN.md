@@ -7,6 +7,8 @@ Brand in one line: **black / charcoal core, bronze accent.** The core carries pr
 
 > Why this exists: before it, "the Babel brand color" resolved to **five** different hexes across the repos, an off-brand indigo `#6366f1` was still lurking as a CSS fallback, one task status rendered in **three** different colors depending on the screen, and mobile carried **8 greens, 6 reds, 4 golds** and **3 incompatible spacing ladders**. No design doc existed in any repo or in Notion. This is that doc, and it is enforced.
 
+> **Rules live in [principles/](./principles/README.md).** This file holds Babel's token *values* and how they are built and consumed. The rules for using them are [principles/COMMON.md](./principles/COMMON.md) (every brand) and [principles/BABEL.md](./principles/BABEL.md) (Babel), cited by ID: `VISUAL-1` (tokens only), `VISUAL-2` (spend the role), `BABEL-ID-2` (bronze text uses `accent-strong`).
+
 ---
 
 ## 1 · Brand identity
@@ -132,7 +134,7 @@ Three roles do not cross to Dart, and are skipped rather than approximated:
 
 1. **Rhythm is produced by the nearest container's `gap`.** An element never sets `margin-bottom` to create rhythm.
 2. **Two levels only:** page (`--gap-page`) and section (`--gap-section`).
-3. **A component declares its role token, never a primitive.** `padding: var(--space-6)` on a card is a violation *even though the number is right*.
+3. **A component declares its role token, never a primitive.** `padding: var(--space-6)` on a card is a violation *even though the number is right*. This is `VISUAL-2`.
 4. **New page roots must register** in the consumer's role registry. Admin's spacing guard (`scripts/check-spacing.mjs` against `src/spacing-roles.json`, run by the pre-push hook) fails on an unregistered page root that sets `gap` or padding, but it recognises a page root only by its class-name suffix: `-page`, `-layout` or `-content`. So a new page root must use one of those suffixes as well as register. The registry check holds any registered selector to its role, but only those suffixes make an unregistered root fail, so an unregistered `.reports-view` or `.reports-shell` is never flagged.
 
 ### 4.4 What this actually retires
@@ -281,19 +283,24 @@ A second guard, `scripts/check-contrast.mjs` (`npm run check:contrast`), verifie
 
 ## 10 · Rules of thumb
 
-- **Never** write a raw hex, `0xFF…`, or `rgb()` in a component. Use a token.
-- **Brand text / buttons / links → `accent-strong`**, not `accent`. `accent` (500) is decorative only.
-- **Status → the semantic role** (`success` / `warning` / `error` / `info`), never a raw green/red.
-- **Charts → `chart-1…8` in order.** No per‑chart palettes.
-- **Primary action → `core`.** It's near‑black in light and near‑white in dark automatically.
-- 🔴 **Never redeclare a name this package owns.** A consumer's `--color-success-600:` or
-  `--z-modal:` does not duplicate the token, it **shadows** it — the consumer's block sits after
-  the `@import`, so the local value renders and the package's is dead. Both values are legal in
-  their own scale, so no value-level lint goes red. It has happened three times: the whole z
-  scale (dead since v0.1.0), `--duration-normal`, and 22 status colours. If the rendered value
-  is the right one, **fix the token** — don't fork it locally. On 2026-09-30 the admin panel still
-  carried **66** declarations of package-owned names, **45** of them with a different value. The
-  live count is `shadowedLegacy` in admin's `scripts/motion-baseline.json`, which can only go down.
-- **Motion → a role** (`--motion-overlay`, `BabelMotion.overlay`), never a raw `150ms` or `Curves.easeInOut`.
+The usage rules are in [principles/](./principles/README.md), cited here by ID:
+
+- No raw hex, `0xFF…` or `rgb()` in a component, and never redeclare a name this package owns: `VISUAL-1`.
+- Brand text, buttons and links use `accent-strong`; `accent` (500) is decorative only: `BABEL-ID-2`.
+- Primary action is `core`, which inverts in dark automatically: `BABEL-ID-1`.
+- Status uses the semantic role (`success` / `warning` / `error` / `info`), each with its text colour: `A11Y-2`.
+- Motion uses a role (`--motion-overlay`, `BabelMotion.overlay`), never a raw `150ms` or `Curves.easeInOut`: `VISUAL-1`.
+
+Token mechanics that are not UX rules stay here:
+
+- 🔴 **Why redeclaring is never safe.** A consumer's `--color-success-600:` or `--z-modal:` does
+  not duplicate the token, it **shadows** it — the consumer's block sits after the `@import`, so
+  the local value renders and the package's is dead. Both values are legal in their own scale, so
+  no value-level lint goes red. It has happened three times: the whole z scale (dead since
+  v0.1.0), `--duration-normal`, and 22 status colours. If the rendered value is the right one,
+  **fix the token** — don't fork it locally. On 2026-09-30 the admin panel still carried **66**
+  declarations of package-owned names, **45** of them with a different value. The live count is
+  `shadowedLegacy` in admin's `scripts/motion-baseline.json`, which can only go down.
+- **Charts use `chart-1…8` in order.** No per-chart palettes.
 - **A spinner or skeleton uses `loop`.** Anything that repeats forever eases `linear` — never `standard`.
-- Changing a brand value is a **one‑line edit to `tokens.json`** + `npm run build`. If you're editing `dist/`, stop.
+- Changing a brand value is a **one-line edit to `tokens.json`** + `npm run build`. If you're editing `dist/`, stop.

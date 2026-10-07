@@ -3,8 +3,9 @@ description: >-
   Generated Babel design tokens (colors, spacing, radius, type) and shared API
   contracts (error codes, enums, bounds) for Flutter — single sources of truth:
   black core + bronze accent (#B08D57), and the wire vocabulary shared with the
-  API and admin panel. The Dart code in lib/ is generated from ../tokens.json
-  and ../contracts/ by ../build.mjs; do not hand-edit it.
+  API and admin panel; plus the index of UX principle IDs. The Dart code in
+  lib/ is generated from ../tokens.json, ../contracts/ and ../principles/ by
+  ../build.mjs; do not hand-edit it.
 version: 0.8.0
 
 # Private: consumed by the mobile app as a git dependency, never published to

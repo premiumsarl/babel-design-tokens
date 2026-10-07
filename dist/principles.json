@@ -1,0 +1,349 @@
+{
+  "$comment": "GENERATED from principles/*.md by build.mjs. Do not edit. common = every brand; any other scope is one brand.",
+  "scopes": [
+    "common",
+    "babel"
+  ],
+  "principles": {
+    "FOCUS-1": {
+      "title": "The object the user came for is in the first viewport",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "FOCUS-2": {
+      "title": "Analysis sits below the object, never above it",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "FOCUS-3": {
+      "title": "Nothing on screen only says something",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "FOCUS-4": {
+      "title": "Fold prose, not verdicts",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "PREVENT-1": {
+      "title": "An incomplete submit stays pressable and says what is missing",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "PREVENT-2": {
+      "title": "Required fields are marked before any click",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "PREVENT-3": {
+      "title": "Input limits are checked live, from the shared contract",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "PREVENT-4": {
+      "title": "An action the server will refuse is hidden or disabled, with its reason",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "PREVENT-5": {
+      "title": "Default only what the domain can stand behind",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "PREVENT-6": {
+      "title": "Never default a legal fact",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "FORM-1": {
+      "title": "A placeholder is not a label",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "FORM-2": {
+      "title": "Scold late, praise early",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "FORM-3": {
+      "title": "The submit button never moves",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "FORM-4": {
+      "title": "Autofill is a state, and is styled",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "FORM-5": {
+      "title": "A code is not a number",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "STATE-1": {
+      "title": "Every data screen has four states",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "STATE-2": {
+      "title": "A failed load is never shown as empty",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "STATE-3": {
+      "title": "Pages shimmer, buttons spin",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "STATE-4": {
+      "title": "An empty state says what to do next",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "COPY-1": {
+      "title": "A refusal names its real gate",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "COPY-2": {
+      "title": "An error code is as specific as the sentence it replaces",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "COPY-3": {
+      "title": "Missing and zero are different facts",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "COPY-4": {
+      "title": "One fact, one voice",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "COPY-5": {
+      "title": "No user-visible string is hard-coded",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "COPY-6": {
+      "title": "Money and dates go through the shared formatters",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "COPY-7": {
+      "title": "Server messages never quote a UI control",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "TRUTH-1": {
+      "title": "Show the server's decision; never re-derive it",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "TRUTH-2": {
+      "title": "Shared vocabularies are imported, never re-typed",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "LIST-1": {
+      "title": "Every visible status or category can be filtered",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "LIST-2": {
+      "title": "A filter matches the raw value, never the translated label",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "LIST-3": {
+      "title": "Never hide what signals money, time or identity",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "LIST-4": {
+      "title": "A saved view stores only what the user changed",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "CONFIRM-1": {
+      "title": "Every confirmation says whether it destroys something",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "CONFIRM-2": {
+      "title": "A destructive dialog opens on Cancel",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "CONFIRM-3": {
+      "title": "Feedback comes from the shared components",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "A11Y-1": {
+      "title": "Text meets WCAG AA in every theme",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "A11Y-2": {
+      "title": "Colour is never the only signal",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "A11Y-3": {
+      "title": "Focus is always visible",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "A11Y-4": {
+      "title": "Every control has a name",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "A11Y-5": {
+      "title": "Touch targets are large enough",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "A11Y-6": {
+      "title": "Disabled stays readable, and working is not disabled",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "VISUAL-1": {
+      "title": "Tokens only",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "VISUAL-2": {
+      "title": "Spend the role, not the number",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "VISUAL-3": {
+      "title": "Every colour exists in light and dark",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "VISUAL-4": {
+      "title": "Compose the shared components; never rebuild one",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "VISUAL-5": {
+      "title": "Pinned headers are opaque",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "DATA-1": {
+      "title": "Mask only what opens a door",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "DATA-2": {
+      "title": "Inform about anomalies in users' data; never act on them",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "DONE-1": {
+      "title": "Done means seen working, not checks passing",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "DONE-2": {
+      "title": "Verify at the hardest layout",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "DONE-3": {
+      "title": "Read the rendered screen, not the source",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "DONE-4": {
+      "title": "A screen that can correctly show nothing needs a positive control",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "DONE-5": {
+      "title": "Never test in production",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "DONE-6": {
+      "title": "A guard's limit only goes down",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "BABEL-ID-1": {
+      "title": "Black core, bronze accent",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-ID-2": {
+      "title": "Bronze text uses the strong bronze",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-ID-3": {
+      "title": "Two voices: the manager's console and the resident's pocket tool",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-ID-4": {
+      "title": "Typefaces",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-ID-5": {
+      "title": "Shapes",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-FOCUS-1": {
+      "title": "Admin lists put the first row in view at 1280×800",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-FOCUS-2": {
+      "title": "Mobile screens lead with one verdict",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-DEVICE-1": {
+      "title": "The Pixel 2 is the mobile floor",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-LANG-1": {
+      "title": "Four locales, one key format",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-LEGAL-1": {
+      "title": "The legal facts Babel never defaults",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-DATA-1": {
+      "title": "What Babel masks and what it shows",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-HAPTIC-1": {
+      "title": "Five vibration tiers on mobile",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-CONFIRM-1": {
+      "title": "What counts as destructive in Babel",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-DONE-1": {
+      "title": "Smoke on dev, as the approved seats only",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    }
+  }
+}

@@ -17,8 +17,8 @@
 //      a cold pub cache) is SKIPPED with a warning naming the file, never
 //      silently; with VERIFY_STRICT set, verify fails at the end, naming
 //      every skip
-//   5. self-tests: the ratchet's scope, and the Dart codegen (shadow lengths,
-//      no private or reserved-word names)
+//   5. self-tests: the ratchet's scope, the Dart codegen (shadow lengths,
+//      no private or reserved-word names), and the principles parse
 //   6. npm/pub version parity (package.json == dart/pubspec.yaml), and the
 //      version has a dart/CHANGELOG.md entry
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -67,12 +67,13 @@ run('contract integrity gate', 'node', ['scripts/check-contracts.mjs']);
 // imports flutter/widgets.dart, so it goes under dart/pubspec.yaml and needs
 // the Flutter SDK. --fatal-infos: plain `dart analyze` exits 0 on an info,
 // and deprecated_member_use is how a Flutter API removal announces itself.
-console.log('\n▶ generated Dart analyzes (babel_contracts.dart as pure Dart, babel_tokens.dart under Flutter)');
-const pureDart = 'dart/lib/babel_contracts.dart';
-const flutterImport = readFileSync(join(root, pureDart), 'utf8').split('\n')
-  .find((l) => /^\s*(?:import|export)\s+['"](?:package:flutter\w*\/|dart:ui(?:_web)?['"])/.test(l));
-if (flutterImport) { console.error(`✗ ${pureDart} must stay pure Dart (see its header), but has: ${flutterImport.trim()}`); process.exit(1); }
-console.log(`  ${pureDart} imports neither Flutter nor dart:ui`);
+console.log('\n▶ generated Dart analyzes (babel_contracts.dart and babel_principles.dart as pure Dart, babel_tokens.dart under Flutter)');
+for (const pureDart of ['dart/lib/babel_contracts.dart', 'dart/lib/babel_principles.dart']) {
+  const flutterImport = readFileSync(join(root, pureDart), 'utf8').split('\n')
+    .find((l) => /^\s*(?:import|export)\s+['"](?:package:flutter\w*\/|dart:ui(?:_web)?['"])/.test(l));
+  if (flutterImport) { console.error(`✗ ${pureDart} must stay pure Dart (see its header), but has: ${flutterImport.trim()}`); process.exit(1); }
+  console.log(`  ${pureDart} imports neither Flutter nor dart:ui`);
+}
 const onPath = (bin) => !spawnSync(bin, ['--version'], { stdio: 'ignore' }).error;
 // pub's words for "could not reach the server". Any other failure to resolve
 // fails the step, so a wording this does not know fails closed.
@@ -110,10 +111,12 @@ const analyze = (file, pub, pubspec) => {
   return offline.status === 0 ? 'the pub cache' : 'pub.dev';
 };
 if (!onPath('dart')) {
-  skip('`dart` not on PATH — SKIPPED: NEITHER dart/lib/babel_tokens.dart NOR dart/lib/babel_contracts.dart was analyzed. Install Flutter (it ships `dart`) to run this step; a file that does not analyze is a build break in babel-mobile.');
+  skip('`dart` not on PATH — SKIPPED: NONE of dart/lib/babel_tokens.dart, babel_contracts.dart or babel_principles.dart was analyzed. Install Flutter (it ships `dart`) to run this step; a file that does not analyze is a build break in babel-mobile.');
 } else {
   const contractsFrom = analyze('babel_contracts.dart', 'dart', 'name: contracts_check\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\n');
   if (contractsFrom) console.log(`  analyzed babel_contracts.dart alone, with no dependencies (resolved from ${contractsFrom})`);
+  const principlesFrom = analyze('babel_principles.dart', 'dart', 'name: principles_check\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\n');
+  if (principlesFrom) console.log(`  analyzed babel_principles.dart alone, with no dependencies (resolved from ${principlesFrom})`);
   if (!onPath('flutter')) {
     skip('`flutter` not on PATH — SKIPPED: dart/lib/babel_tokens.dart was NOT analyzed (it imports flutter/widgets.dart). Install Flutter to check it.');
   } else {
@@ -124,6 +127,7 @@ if (!onPath('dart')) {
 
 run('ratchet scope (test files excluded, real literals counted)', 'node', ['scripts/__tests__/ratchet-scope.test.mjs']);
 run('Dart codegen (shadow lengths exact or refused, no private or reserved-word names)', 'node', ['scripts/__tests__/dart-codegen.test.mjs']);
+run('principles parse (every refusal fires, principles/ parses clean)', 'node', ['scripts/__tests__/principles.test.mjs']);
 
 console.log('\n▶ version parity (package.json == dart/pubspec.yaml) + CHANGELOG entry');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;

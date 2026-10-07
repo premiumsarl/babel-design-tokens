@@ -1,14 +1,15 @@
 {
   "name": "@premiumsarl/babel-design-tokens",
   "version": "0.8.0",
-  "description": "Single source of truth for Babel's design tokens AND shared API contracts — black core + bronze accent. Generates CSS custom properties (admin + website), JS/TS constants (admin + api) and Dart constants (mobile, via the /dart pub package).",
+  "description": "Single source of truth for Babel's design tokens, shared API contracts and the UX principles every Premium SARL brand follows — black core + bronze accent. Generates CSS custom properties (admin + website), JS/TS constants (admin + api), Dart constants (mobile, via the /dart pub package) and an index of the principles' rule IDs.",
   "type": "module",
   "files": [
     "tokens.json",
     "contracts/",
     "dist/",
     "README.md",
-    "DESIGN.md"
+    "DESIGN.md",
+    "principles/"
   ],
   "exports": {
     ".": "./dist/tokens.flat.json",
@@ -20,6 +21,7 @@
       "default": "./dist/contracts.mjs"
     },
     "./contracts.json": "./dist/contracts.flat.json",
+    "./principles.json": "./dist/principles.json",
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -29,6 +31,7 @@
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",
     "check:ratchet": "node scripts/__tests__/ratchet-scope.test.mjs",
+    "check:principles": "node scripts/__tests__/principles.test.mjs",
     "verify": "node scripts/verify.mjs",
     "prepublishOnly": "node build.mjs && node scripts/check-contrast.mjs && node scripts/check-contracts.mjs",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"

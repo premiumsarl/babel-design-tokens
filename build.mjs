@@ -14,6 +14,9 @@
  *                   dist/contracts.flat.json     flat map                             → tooling / CI ratchet
  *                   dart/lib/babel_contracts.dart Dart constants                      → mobile
  *
+ *   principles/  →  dist/principles.json         rule ID → title + scope              → admin docs check
+ *                   dart/lib/babel_principles.dart the same index in Dart              → mobile docs check
+ *
  * Contracts ride the token pipeline deliberately: it is the only distribution
  * we have that already reaches all three clients (npm for web, pub for Flutter)
  * off ONE git tag. A second mechanism would be a second thing to keep in sync.
@@ -29,6 +32,7 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { readPrinciples } from './scripts/principles.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const DIST = join(ROOT, 'dist');
@@ -1180,6 +1184,49 @@ String? resolveContractValue(
 }
 `;
 
+/* ---------- principles ----------
+   principles/*.md are written for people; this emits the index of their rule
+   IDs, so an app can check that the IDs its design doc cites exist in the
+   release it pins. The parse and its refusals live in scripts/principles.mjs. */
+const { principles, scopes, errors: principleErrors } = readPrinciples(join(ROOT, 'principles'));
+if (principleErrors.length) {
+  console.error(`✗ principles/ has ${principleErrors.length} problem(s):\n`
+    + principleErrors.map((e) => `    ${e}`).join('\n'));
+  process.exit(1);
+}
+const principlesJson = JSON.stringify({
+  $comment: 'GENERATED from principles/*.md by build.mjs. Do not edit. common = every brand; any other scope is one brand.',
+  scopes,
+  principles,
+}, null, 2) + '\n';
+
+const principlesDartMap = (field) =>
+  `<String, String>{\n${Object.entries(principles)
+    .map(([id, p]) => `    ${dartStr(id)}: ${dartStr(p[field])},`)
+    .join('\n')}\n  }`;
+
+const principlesDart = `// UX principles index — GENERATED from principles/*.md. Do not edit.
+//
+// The rule IDs defined in principles/COMMON.md (every brand) and in each
+// brand's file, so the mobile app can check that the IDs its design doc cites
+// exist in the release it pins. The rules themselves are prose, in
+// principles/ in the babel-design-tokens repo.
+//
+// Pure Dart, like babel_contracts.dart: no Flutter import.
+
+/// Every UX principle this release defines.
+abstract final class BabelPrinciples {
+  /// Scopes in file order: \`common\` (every brand), then each brand.
+  static const List<String> scopes = ${dartList(scopes, '  ')};
+
+  /// Rule ID → its scope.
+  static const Map<String, String> scope = ${principlesDartMap('scope')};
+
+  /// Rule ID → its title.
+  static const Map<String, String> title = ${principlesDartMap('title')};
+}
+`;
+
 /* ---------- the generated Dart is all public ----------
    A leading underscore makes a Dart name library-private, and dartName gives
    one to every digit-leading key (`2xl` → `_2xl`) for the emitter to swap
@@ -1226,6 +1273,7 @@ const assertDartPublic = (source, file) => {
 };
 assertDartPublic(dart, 'babel_tokens.dart');
 assertDartPublic(contractsDart, 'babel_contracts.dart');
+assertDartPublic(principlesDart, 'babel_principles.dart');
 
 /* ---------- write (or, with --check, compare) ---------- */
 const DART_LIB = join(ROOT, 'dart', 'lib');
@@ -1238,6 +1286,8 @@ const outputs = [
   [join(DIST, 'contracts.d.ts'), contractsDts],
   [join(DIST, 'contracts.flat.json'), JSON.stringify(contractsFlat, null, 2) + '\n'],
   [join(DART_LIB, 'babel_contracts.dart'), contractsDart],
+  [join(DIST, 'principles.json'), principlesJson],
+  [join(DART_LIB, 'babel_principles.dart'), principlesDart],
 ];
 
 const rel = (p) => p.slice(ROOT.length + 1);
@@ -1268,6 +1318,7 @@ if (CHECK_ONLY) {
     + `${Object.keys(fieldErrorCodes.codes).length} field-error codes, `
     + `${enums.length} enums (${enums.reduce((n, e) => n + e.values.length, 0)} values), `
     + `${Object.keys(rules).length} limits\n`
+    + `✓ principles ${Object.keys(principles).length} rules across ${scopes.join(', ')}\n`
     + `  → ${outputs.map(([p]) => rel(p)).join('  ')}`,
   );
 }
