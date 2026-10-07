@@ -1,12 +1,13 @@
 # @premiumsarl/babel-design-tokens
 
-Single source of truth for two things Babel's apps must agree on exactly:
+Single source of truth for three things:
 
 - **design tokens** — black core + bronze accent (`#B08D57`), as CSS custom properties (admin panel + website) and Dart constants (mobile);
-- **shared contracts** — the wire vocabulary (error codes, enums, bounds) shared by `babel-lambda-api`, `babel-admin-panel` and `babel-mobile`.
+- **shared contracts** — the wire vocabulary (error codes, enums, bounds) shared by `babel-lambda-api`, `babel-admin-panel` and `babel-mobile`;
+- **UX principles** — the rules every Premium SARL brand follows ([principles/COMMON.md](./principles/COMMON.md)), and one file per brand beside it ([principles/BABEL.md](./principles/BABEL.md), …).
 
-See **[DESIGN.md](./DESIGN.md)** for the full design system (palette, type, spacing, usage, governance, migration)
-and **[Contracts](#contracts)** below for the vocabulary half.
+See **[DESIGN.md](./DESIGN.md)** for Babel's token values (palette, type, spacing, motion, governance),
+**[Contracts](#contracts)** below for the vocabulary half, and **[principles/README.md](./principles/README.md)** for how the principles work.
 
 ## Layout
 
@@ -17,11 +18,15 @@ contracts/                  ← shared vocabulary: the ONLY files you edit
   field-error-codes.json    → the `error.field.*` family + their params
   enums/*.json              → one file per enum (values, aliases, deprecated, subsets)
   rules/*.json              → numeric + string bounds more than one repo enforces
+principles/                 ← UX principles: the ONLY files you edit (see principles/README.md)
+  COMMON.md                 → the rules every brand follows
+  <BRAND>.md                → one file per brand (BABEL.md, …)
 build.mjs                   ← generator (no deps): resolves aliases, emits the outputs
                               `--check` compares instead of writing
 scripts/check-tokens.mjs    ← the drift ratchet (fails on new raw color literals; consumers vendor it)
 scripts/check-contrast.mjs  ← the WCAG gate
 scripts/check-contracts.mjs ← the contract invariants (see Contracts below)
+scripts/principles.mjs      ← the principles parse (rule headings, ID shapes, cross-references)
 scripts/verify.mjs          ← the whole gate: `npm run verify`, run by .githooks/pre-push
 dist/                       ← GENERATED — never hand-edit
   tokens.css                → import in admin (theme-adaptive: light/dark)
@@ -30,10 +35,12 @@ dist/                       ← GENERATED — never hand-edit
   contracts.mjs             → import in admin + api (frozen const maps)
   contracts.d.ts            → literal types for the above
   contracts.flat.json       → tooling / flat contract map
+  principles.json           → rule ID → title + scope, for an app's docs check
 dart/                       ← a Flutter pub package (consumed by mobile)
   pubspec.yaml
   lib/babel_tokens.dart     → GENERATED — BabelColors / BabelSpace / BabelType …
   lib/babel_contracts.dart  → GENERATED — BabelErrorCodes / BabelTaskStatus / BabelLimits …
+  lib/babel_principles.dart → GENERATED — BabelPrinciples (rule ID → title + scope)
 ```
 
 ## One source, per-ecosystem delivery
@@ -261,7 +268,7 @@ npm run verify                      # the whole gate (the pre-push hook runs it)
 VERIFY_STRICT=1 npm run verify      # the same, but a check it has to skip fails it (step 6)
 ```
 
-1. Edit `tokens.json` (alias with `{color.brand.500}`) and/or `contracts/*.json`.
+1. Edit `tokens.json` (alias with `{color.brand.500}`), `contracts/*.json` and/or `principles/*.md`.
 2. `npm run build` — regenerates `dist/*` **and** `dart/lib/*`.
 3. `npm run verify` — every gate above. Put Flutter on `PATH` first: without it the Dart step is skipped, and the warning names the file it did not analyze.
 4. Bump `version` in **both** `package.json` and `dart/pubspec.yaml` (keep them equal), and add a `## X.Y.Z` entry to `dart/CHANGELOG.md`. `verify` fails without one.

@@ -40,6 +40,8 @@ const build = (edit) => {
   try {
     cpSync(join(repo, 'build.mjs'), join(dir, 'build.mjs'));
     cpSync(join(repo, 'contracts'), join(dir, 'contracts'), { recursive: true });
+    cpSync(join(repo, 'principles'), join(dir, 'principles'), { recursive: true });
+    cpSync(join(repo, 'scripts', 'principles.mjs'), join(dir, 'scripts', 'principles.mjs'));
     const tokens = readJson('tokens.json');
     const limits = readJson('contracts/rules/limits.json');
     const taskPriority = readJson('contracts/enums/task-priority.json');
