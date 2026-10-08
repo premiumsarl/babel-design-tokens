@@ -115,7 +115,7 @@ abstract final class BabelPrinciples {
     'FOCUS-2': 'Analysis sits below the object, never above it',
     'FOCUS-3': 'Nothing on screen only says something',
     'FOCUS-4': 'Fold prose, not verdicts',
-    'PREVENT-1': 'An incomplete submit stays pressable and says what is missing',
+    'PREVENT-1': 'An incomplete submit stays pressable and takes the user to the gap',
     'PREVENT-2': 'Required fields are marked before any click',
     'PREVENT-3': 'Input limits are checked live, from the shared contract',
     'PREVENT-4': 'An action the server will refuse is hidden or disabled, with its reason',

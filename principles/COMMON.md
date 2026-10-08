@@ -36,13 +36,16 @@ provenance and the legal note.
 ## Prevent: remove the need for an error message
 
 The UI should make an error message unnecessary, not report one after the
-click (owner ruling, 2026-10-03).
+click (owner rulings, 2026-10-03 and 2026-10-07).
 
-### PREVENT-1 · An incomplete submit stays pressable and says what is missing
+### PREVENT-1 · An incomplete submit stays pressable and takes the user to the gap
 
 The button is dimmed but focusable: `aria-disabled` on the web, never
-`disabled`. A "Still needed: …" line sits beside it. A press moves focus to
-the first missing field. No toast, and never a dead button.
+`disabled`. A press only moves focus to the first missing field: no toast, no
+field turned red, and never a dead button. That field's error shows when the
+user leaves it (`FORM-2`). Nothing on screen lists what is missing; a screen
+reader hears it as the button's description (owner ruling, 2026-10-07, which
+retired the visible "Still needed" line).
 
 ### PREVENT-2 · Required fields are marked before any click
 
@@ -80,14 +83,15 @@ example, such as "H2X 1Y4".
 
 ### FORM-2 · Scold late, praise early
 
-A field's error appears when the user leaves it or submits. It clears on the
-keystroke that fixes it.
+A field's error appears when the user leaves it, never before they have been
+in it, and a press on an incomplete submit does not turn other fields red
+(`PREVENT-1`). It clears on the keystroke that fixes it.
 
 ### FORM-3 · The submit button never moves
 
 An error never pushes the submit button down. Reserve one line under each
-field for its error. On long forms and in dialogs, pin the submit in a footer
-next to the "Still needed" line from `PREVENT-1`.
+field for its error. On long forms and in dialogs, pin the submit in a
+footer.
 
 ### FORM-4 · Autofill is a state, and is styled
 
@@ -237,8 +241,9 @@ An icon-only button carries an accessible label and a tooltip.
 
 ### A11Y-6 · Disabled stays readable, and working is not disabled
 
-A disabled button still reads clearly and says what is left to do. A button
-that is loading keeps its enabled colours and its name.
+A disabled or dimmed button still reads clearly, and a screen reader hears
+what is left to do with it. A button that is loading keeps its enabled colours
+and its name.
 
 ## Visual system
 
