@@ -6,7 +6,7 @@ description: >-
   API and admin panel; plus the index of UX principle IDs. The Dart code in
   lib/ is generated from ../tokens.json, ../contracts/ and ../principles/ by
   ../build.mjs; do not hand-edit it.
-version: 0.8.0
+version: 0.8.1
 
 # Private: consumed by the mobile app as a git dependency, never published to
 # pub.dev. `pub` still resolves it from a git url + ref (see README.md).

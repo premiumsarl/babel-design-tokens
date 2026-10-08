@@ -5,6 +5,16 @@ package (`lib/`) come off the same `vX.Y.Z` tag. Entries name the CSS and
 Dart surface of each change. 0.3.0–0.7.0 were backfilled in 0.8.0 from the
 commit history; this file had stopped at 0.2.0.
 
+## 0.8.1
+- **`PREVENT-1` revised (owner ruling, 2026-10-07): errors show when the user
+  leaves a field.** The visible "Still needed" line is retired. An incomplete
+  submit stays dimmed but pressable and a press only moves focus to the first
+  missing field; that field's error shows when the user leaves it, and a
+  screen reader hears what is missing as the button's description. `FORM-2`,
+  `FORM-3` and `A11Y-6` follow. Rule IDs are unchanged, so no app's map
+  breaks; only the text and the `PREVENT-1` title in `principles.json` /
+  `BabelPrinciples` change.
+
 ## 0.8.0
 - **UX principles.** New `principles/` folder: `COMMON.md` holds the rules every
   Premium SARL brand follows, and one file per brand sits beside it:

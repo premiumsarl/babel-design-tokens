@@ -30,7 +30,7 @@
       "file": "principles/COMMON.md"
     },
     "PREVENT-1": {
-      "title": "An incomplete submit stays pressable and says what is missing",
+      "title": "An incomplete submit stays pressable and takes the user to the gap",
       "scope": "common",
       "file": "principles/COMMON.md"
     },
