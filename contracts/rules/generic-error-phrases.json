@@ -1,0 +1,567 @@
+{
+  "$meta": {
+    "name": "Generic error phrases",
+    "description": "The wording ERROR-2 bans, per locale: messages that do not say what failed, why, or what to do. Every app's error-copy guard reads this list (scripts/check-error-copy.mjs, or a vendored copy, or a Dart twin reading BabelGenericErrorPhrases). Brand-neutral.",
+    "owner": "design",
+    "matching": {
+      "normalize": "Unicode NFC; lower case; ’ ‘ ʼ ´ ` become '; “ ” « » become \"; Arabic tashkil (U+064B–U+0652) and tatweel (U+0640) removed; every run of whitespace (including no-break and narrow no-break spaces) becomes one space; leading characters that are neither letters nor digits (emoji, bullets, punctuation) removed; trimmed. Phrases below are stored already normalized.",
+      "whole": "The normalized message, with trailing punctuation and spaces removed, IS the phrase. Exempt: a status badge (ERROR-2), which an app lists in its guard's `allow` with the reason. A plain imperative such as \"try again\" / « réessayez » is a button label and is not listed in any locale; its polite message form (\"please try again\", « veuillez réessayer ») is.",
+      "opening": "The normalized message starts with the phrase, and the next character is not a letter or digit (a word boundary). No boundary is needed after a Han, Hiragana, Katakana or Hangul character, or after a phrase that ends in punctuation (« impossible d' »).",
+      "anywhere": "The phrase appears anywhere in the normalized message, at word boundaries on both sides (the same exemption for Han, Hiragana, Katakana and Hangul).",
+      "sourceLiterals": "In source code, only literals that read as prose are checked: they start with an upper-case or non-Latin letter, or contain a space. Wire values ('failed', 'error.generic.internal') and translation keys are not prose.",
+      "causeless": "An opening that can carry a cause (\"could not …\", « impossible de … », « échec … », « не удалось … »). It matches only when no cause follows: the message opens with the phrase (as for `opening`), its first clause holds none of the locale's `causeWords`, and every later clause is one of the locale's `filler` sentences or empty. Clauses are split at . ! ? : ; , ( and a spaced dash, and at their CJK and Arabic forms. \"Could not load the tasks. Please try again.\" matches; \"Could not save: the server did not answer within 30 s.\" does not.",
+      "filler": "Per locale: clauses that add no cause and no specific next step (\"please try again\", \"sorry\"). Used only by `causeless`; never banned on their own.",
+      "causeWords": "Per locale: words that introduce a cause inside the first clause (\"because\", « parce que »). Used only by `causeless`."
+    },
+    "locales": "en, fr, es and zh for Babel's admin panel and mobile app and for Rendee; pt for Babel's website; ar, de, it, ja, ko and ru for Babel's chatbot. A guard checks a catalogue against its own locale and against en (the source language an untranslated value is left in), and a source literal (whose locale is unknown) against every locale. Every locale lists whole, opening and anywhere; causeless, filler and causeWords may be empty where the language does not open a sentence that way (ja, ko).",
+    "provenance": {
+      "measuredOn": "2026-10-20",
+      "source": "The clear-errors program inventory (ERRORS_PROGRAM_2026-10-20.md): every generic phrase found in the Babel and Rendee catalogues and sources, plus the standard translations of each."
+    }
+  },
+  "phrases": {
+    "en": {
+      "whole": [
+        "error",
+        "failed",
+        "failure",
+        "oops",
+        "please try again",
+        "still not responding",
+        "not responding",
+        "whoops",
+        "request timed out",
+        "service unavailable",
+        "load failed",
+        "an error occured"
+      ],
+      "opening": [
+        "something went wrong",
+        "something has gone wrong",
+        "something unexpected happened",
+        "an error occurred",
+        "an error has occurred",
+        "an error was encountered",
+        "an unexpected error",
+        "unexpected error",
+        "an unknown error",
+        "unknown error",
+        "an internal error",
+        "there was an error",
+        "there was a problem",
+        "a problem occurred",
+        "oops",
+        "error",
+        "failed:",
+        "request failed",
+        "internal server error",
+        "server error",
+        "network error",
+        "that didn't work",
+        "that did not work",
+        "sorry, something",
+        "sorry, an error",
+        "unable to complete your request",
+        "whoops",
+        "an error occured"
+      ],
+      "anywhere": [
+        "something went wrong",
+        "an error occurred",
+        "an error has occurred",
+        "an unexpected error occurred",
+        "try again later",
+        "please try again later",
+        "try again in a moment",
+        "try again shortly",
+        "try again in a few moments",
+        "our team has been notified",
+        "we have been notified",
+        "we've been notified",
+        "an error occured"
+      ],
+      "causeless": [
+        "could not",
+        "couldn't",
+        "unable to",
+        "cannot",
+        "can't",
+        "failed to"
+      ],
+      "filler": [
+        "please try again",
+        "try again",
+        "please retry",
+        "retry",
+        "try again later",
+        "please try again later",
+        "sorry",
+        "please"
+      ],
+      "causeWords": [
+        "because",
+        "since"
+      ]
+    },
+    "fr": {
+      "whole": [
+        "erreur",
+        "échec",
+        "échoué",
+        "oups",
+        "veuillez réessayer",
+        "ne répond toujours pas",
+        "ne répond pas"
+      ],
+      "opening": [
+        "une erreur est survenue",
+        "une erreur s'est produite",
+        "une erreur inattendue",
+        "erreur inattendue",
+        "une erreur inconnue",
+        "erreur inconnue",
+        "une erreur interne",
+        "quelque chose s'est mal passé",
+        "un problème est survenu",
+        "un problème s'est produit",
+        "oups",
+        "erreur",
+        "la requête a échoué",
+        "la demande a échoué",
+        "erreur réseau",
+        "erreur interne du serveur",
+        "erreur serveur",
+        "erreur du serveur",
+        "cela n'a pas fonctionné",
+        "ça n'a pas fonctionné",
+        "désolé, une erreur"
+      ],
+      "anywhere": [
+        "une erreur est survenue",
+        "une erreur s'est produite",
+        "quelque chose s'est mal passé",
+        "réessayez plus tard",
+        "veuillez réessayer plus tard",
+        "réessayez ultérieurement",
+        "veuillez réessayer ultérieurement",
+        "réessayez dans un instant",
+        "réessayez dans un moment",
+        "réessayez sous peu",
+        "notre équipe a été informée",
+        "notre équipe a été avertie",
+        "notre équipe a été prévenue",
+        "notre équipe a été notifiée"
+      ],
+      "causeless": [
+        "impossible de",
+        "impossible d'",
+        "échec",
+        "nous n'avons pas pu",
+        "nous ne pouvons pas"
+      ],
+      "filler": [
+        "veuillez réessayer",
+        "réessayez",
+        "merci de réessayer",
+        "veuillez réessayer plus tard",
+        "réessayez plus tard",
+        "désolé",
+        "désolée"
+      ],
+      "causeWords": [
+        "car",
+        "parce que",
+        "puisque"
+      ]
+    },
+    "es": {
+      "whole": [
+        "error",
+        "falló",
+        "fallido",
+        "ups",
+        "no responde",
+        "por favor, inténtalo de nuevo",
+        "por favor, inténtelo de nuevo",
+        "por favor, vuelve a intentarlo"
+      ],
+      "opening": [
+        "algo salió mal",
+        "algo ha salido mal",
+        "ha ocurrido un error",
+        "ocurrió un error",
+        "se produjo un error",
+        "se ha producido un error",
+        "un error inesperado",
+        "error inesperado",
+        "error desconocido",
+        "error de red",
+        "error interno del servidor",
+        "error del servidor",
+        "error",
+        "la solicitud falló",
+        "ups"
+      ],
+      "anywhere": [
+        "algo salió mal",
+        "ha ocurrido un error",
+        "ocurrió un error",
+        "se produjo un error",
+        "se ha producido un error",
+        "inténtalo más tarde",
+        "inténtelo más tarde",
+        "inténtalo de nuevo más tarde",
+        "inténtelo de nuevo más tarde",
+        "vuelve a intentarlo más tarde",
+        "vuelva a intentarlo más tarde",
+        "nuestro equipo ha sido notificado"
+      ],
+      "causeless": [
+        "no se pudo",
+        "no se ha podido",
+        "no fue posible",
+        "no es posible"
+      ],
+      "filler": [
+        "inténtalo de nuevo",
+        "inténtelo de nuevo",
+        "vuelve a intentarlo",
+        "vuelva a intentarlo",
+        "por favor",
+        "lo sentimos"
+      ],
+      "causeWords": [
+        "porque",
+        "ya que",
+        "debido a que"
+      ]
+    },
+    "zh": {
+      "whole": [
+        "错误",
+        "失败",
+        "出错了",
+        "哎呀",
+        "请重试",
+        "未响应"
+      ],
+      "opening": [
+        "出现错误",
+        "发生错误",
+        "出现了错误",
+        "发生了错误",
+        "出错了",
+        "出了点问题",
+        "未知错误",
+        "意外错误",
+        "发生意外错误",
+        "网络错误",
+        "服务器错误",
+        "服务器内部错误",
+        "请求失败",
+        "操作失败",
+        "哎呀"
+      ],
+      "anywhere": [
+        "出现错误",
+        "发生错误",
+        "出了点问题",
+        "稍后重试",
+        "稍后再试",
+        "我们的团队已收到通知"
+      ],
+      "causeless": [
+        "无法",
+        "未能"
+      ],
+      "filler": [
+        "请重试",
+        "请再试一次",
+        "请稍后重试",
+        "请稍后再试"
+      ],
+      "causeWords": [
+        "因为",
+        "由于"
+      ]
+    },
+    "pt": {
+      "whole": [
+        "erro",
+        "falhou",
+        "falha",
+        "ops",
+        "não está respondendo",
+        "por favor, tente novamente"
+      ],
+      "opening": [
+        "algo deu errado",
+        "ocorreu um erro",
+        "um erro inesperado",
+        "erro inesperado",
+        "erro desconhecido",
+        "erro de rede",
+        "erro interno do servidor",
+        "erro do servidor",
+        "erro",
+        "a solicitação falhou",
+        "ops"
+      ],
+      "anywhere": [
+        "algo deu errado",
+        "ocorreu um erro",
+        "tente novamente mais tarde",
+        "tente mais tarde",
+        "nossa equipe foi notificada"
+      ],
+      "causeless": [
+        "não foi possível",
+        "não é possível",
+        "falha"
+      ],
+      "filler": [
+        "tente novamente",
+        "tente de novo",
+        "por favor",
+        "desculpe"
+      ],
+      "causeWords": [
+        "porque",
+        "pois"
+      ]
+    },
+    "ar": {
+      "whole": [
+        "خطأ",
+        "فشل",
+        "عفوا"
+      ],
+      "opening": [
+        "حدث خطأ",
+        "حدث خطأ ما",
+        "حدث خطأ غير متوقع",
+        "خطأ غير متوقع",
+        "خطأ غير معروف",
+        "خطأ في الشبكة",
+        "خطأ في الخادم",
+        "خطأ داخلي في الخادم",
+        "فشل الطلب",
+        "هناك خطأ ما"
+      ],
+      "anywhere": [
+        "حدث خطأ",
+        "حدث خطأ ما",
+        "يرجى المحاولة مرة أخرى لاحقا",
+        "يرجى المحاولة لاحقا",
+        "حاول مرة أخرى لاحقا",
+        "حاول لاحقا"
+      ],
+      "causeless": [
+        "تعذر",
+        "لا يمكن"
+      ],
+      "filler": [
+        "يرجى المحاولة مرة أخرى",
+        "حاول مرة أخرى",
+        "عذرا"
+      ],
+      "causeWords": [
+        "لأن",
+        "بسبب"
+      ]
+    },
+    "de": {
+      "whole": [
+        "fehler",
+        "fehlgeschlagen",
+        "hoppla",
+        "ups"
+      ],
+      "opening": [
+        "etwas ist schiefgelaufen",
+        "etwas ist schief gelaufen",
+        "ein fehler ist aufgetreten",
+        "es ist ein fehler aufgetreten",
+        "ein unerwarteter fehler",
+        "unerwarteter fehler",
+        "unbekannter fehler",
+        "netzwerkfehler",
+        "interner serverfehler",
+        "serverfehler",
+        "fehler",
+        "anfrage fehlgeschlagen",
+        "hoppla"
+      ],
+      "anywhere": [
+        "etwas ist schiefgelaufen",
+        "ein fehler ist aufgetreten",
+        "es ist ein fehler aufgetreten",
+        "versuchen sie es später erneut",
+        "versuchen sie es später noch einmal",
+        "versuche es später erneut",
+        "später erneut versuchen"
+      ],
+      "causeless": [
+        "konnte nicht",
+        "kann nicht"
+      ],
+      "filler": [
+        "bitte versuchen sie es erneut",
+        "versuchen sie es erneut",
+        "bitte erneut versuchen",
+        "erneut versuchen",
+        "bitte",
+        "entschuldigung"
+      ],
+      "causeWords": [
+        "weil"
+      ]
+    },
+    "it": {
+      "whole": [
+        "errore",
+        "non riuscito",
+        "fallito",
+        "ops"
+      ],
+      "opening": [
+        "qualcosa è andato storto",
+        "si è verificato un errore",
+        "un errore imprevisto",
+        "errore imprevisto",
+        "errore sconosciuto",
+        "errore di rete",
+        "errore interno del server",
+        "errore del server",
+        "errore",
+        "richiesta non riuscita",
+        "ops"
+      ],
+      "anywhere": [
+        "qualcosa è andato storto",
+        "si è verificato un errore",
+        "riprova più tardi",
+        "riprovare più tardi",
+        "riprova tra poco"
+      ],
+      "causeless": [
+        "impossibile",
+        "non è stato possibile"
+      ],
+      "filler": [
+        "riprova",
+        "riprovare",
+        "per favore riprova",
+        "per favore",
+        "ci dispiace"
+      ],
+      "causeWords": [
+        "perché",
+        "poiché"
+      ]
+    },
+    "ja": {
+      "whole": [
+        "エラー",
+        "失敗",
+        "失敗しました",
+        "おっと"
+      ],
+      "opening": [
+        "エラーが発生しました",
+        "問題が発生しました",
+        "何か問題が発生しました",
+        "予期しないエラー",
+        "不明なエラー",
+        "ネットワークエラー",
+        "サーバーエラー",
+        "内部サーバーエラー",
+        "リクエストに失敗しました"
+      ],
+      "anywhere": [
+        "エラーが発生しました",
+        "問題が発生しました",
+        "後でもう一度お試しください",
+        "しばらくしてからもう一度お試しください",
+        "後でやり直してください"
+      ],
+      "causeless": [],
+      "filler": [],
+      "causeWords": []
+    },
+    "ko": {
+      "whole": [
+        "오류",
+        "실패",
+        "앗"
+      ],
+      "opening": [
+        "문제가 발생했습니다",
+        "오류가 발생했습니다",
+        "예기치 않은 오류",
+        "알 수 없는 오류",
+        "네트워크 오류",
+        "서버 오류",
+        "내부 서버 오류",
+        "요청 실패",
+        "요청에 실패했습니다",
+        "뭔가 잘못되었습니다"
+      ],
+      "anywhere": [
+        "오류가 발생했습니다",
+        "문제가 발생했습니다",
+        "나중에 다시 시도해 주세요",
+        "나중에 다시 시도하세요",
+        "잠시 후 다시 시도해 주세요"
+      ],
+      "causeless": [],
+      "filler": [],
+      "causeWords": []
+    },
+    "ru": {
+      "whole": [
+        "ошибка",
+        "сбой",
+        "упс",
+        "не отвечает"
+      ],
+      "opening": [
+        "что-то пошло не так",
+        "произошла ошибка",
+        "произошла непредвиденная ошибка",
+        "непредвиденная ошибка",
+        "неизвестная ошибка",
+        "ошибка сети",
+        "сетевая ошибка",
+        "внутренняя ошибка сервера",
+        "ошибка сервера",
+        "ошибка",
+        "запрос не выполнен",
+        "упс"
+      ],
+      "anywhere": [
+        "что-то пошло не так",
+        "произошла ошибка",
+        "попробуйте позже",
+        "повторите попытку позже",
+        "попробуйте еще раз позже",
+        "попробуйте ещё раз позже"
+      ],
+      "causeless": [
+        "не удалось",
+        "невозможно"
+      ],
+      "filler": [
+        "попробуйте еще раз",
+        "попробуйте ещё раз",
+        "повторите попытку",
+        "пожалуйста",
+        "извините"
+      ],
+      "causeWords": [
+        "потому что",
+        "так как"
+      ]
+    }
+  }
+}

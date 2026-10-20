@@ -10,6 +10,8 @@
  *                   dart/lib/babel_tokens.dart   Dart constants (a pub package)       → mobile
  *
  *   contracts/   →  dist/contracts.mjs           frozen const maps                    → admin + api
+ *                   (error codes, field-error codes, enums, limits, failure kinds,
+ *                   the error envelope, the generic error phrases)
  *                   dist/contracts.d.ts          literal types for the above
  *                   dist/contracts.flat.json     flat map                             → tooling / CI ratchet
  *                   dart/lib/babel_contracts.dart Dart constants                      → mobile
@@ -784,11 +786,21 @@ const enums = jsonFiles(join(CONTRACTS, 'enums')).map((f) => {
   };
 });
 
-/** contracts/rules/*.json merged into one flat scalar map. */
+/** contracts/rules/*.json merged into one flat scalar map. A rules file holds
+ *  either `rules` (bounds, emitted as LIMITS) or `phrases` (the generic error
+ *  phrases, emitted as GENERIC_ERROR_PHRASES); anything else is refused, so a
+ *  new kind of rules file cannot be silently dropped. */
 const rules = {};
 const ruleSource = {};
+let genericErrorPhrases = null;
 for (const f of jsonFiles(join(CONTRACTS, 'rules'))) {
   const c = readJson(join(CONTRACTS, 'rules', f));
+  if (c.phrases) {
+    if (genericErrorPhrases) throw new Error(`rules/${f}: a second phrases file; there is one generic-error phrase list`);
+    genericErrorPhrases = c.phrases;
+    continue;
+  }
+  if (!c.rules) throw new Error(`rules/${f}: holds neither \`rules\` (bounds) nor \`phrases\` (generic error phrases)`);
   for (const [k, v] of Object.entries(c.rules)) {
     if (k in rules)
       throw new Error(`Duplicate rule "${k}" in rules/${f} and rules/${ruleSource[k]}`);
@@ -796,6 +808,35 @@ for (const f of jsonFiles(join(CONTRACTS, 'rules'))) {
     ruleSource[k] = f;
   }
 }
+
+if (!genericErrorPhrases) throw new Error('contracts/rules/generic-error-phrases.json is missing');
+
+/** The lists every locale of the phrase file carries (see its $meta.matching). */
+const PHRASE_LISTS = ['whole', 'opening', 'anywhere', 'causeless', 'filler', 'causeWords'];
+for (const [locale, lists] of Object.entries(genericErrorPhrases))
+  for (const m of PHRASE_LISTS)
+    if (!Array.isArray(lists[m])) throw new Error(`generic-error-phrases.json: ${locale}.${m} must be a list (empty where the language has none)`);
+
+/** contracts/failure-kinds.json: the kinds a client tells apart (ERROR-3). */
+const failureKindsContract = readJson(join(CONTRACTS, 'failure-kinds.json'));
+const failureKinds = Object.entries(failureKindsContract.kinds).map(([kind, k]) => ({
+  kind,
+  // front_door → frontDoor, the Dart constant
+  camel: kind.replace(/_(.)/g, (_, c) => c.toUpperCase()),
+  retry: k.retry,
+  savedOnWrite: k.savedOnWrite,
+  showReference: k.showReference,
+  toast: k.toast,
+  where: k.where ?? null,
+  meaning: k.meaning,
+}));
+
+/** contracts/error-envelope.json: the error body every API returns (ERROR-6). */
+const errorEnvelope = readJson(join(CONTRACTS, 'error-envelope.json'));
+const genericCodeValues = errorEnvelope.genericCodes.map((name) => {
+  if (!(name in errorCodes.codes)) throw new Error(`error-envelope.json genericCodes: ${name} is not in error-codes.json`);
+  return errorCodes.codes[name];
+});
 
 /* ---------- contracts: flat map ----------
    Scalars flatten to dotted keys exactly like tokens.flat.json. A value LIST
@@ -820,6 +861,23 @@ for (const e of enums) {
     contractsFlat[`enum.${e.camel}.subsets.${sub}`] = vals;
 }
 for (const [k, v] of Object.entries(rules)) contractsFlat[`limit.${k}`] = v;
+for (const k of failureKinds) {
+  contractsFlat[`failureKind.${k.kind}.retry`] = k.retry;
+  contractsFlat[`failureKind.${k.kind}.savedOnWrite`] = k.savedOnWrite;
+  contractsFlat[`failureKind.${k.kind}.showReference`] = k.showReference;
+  contractsFlat[`failureKind.${k.kind}.toast`] = k.toast;
+  if (k.where) contractsFlat[`failureKind.${k.kind}.where`] = k.where;
+}
+contractsFlat['errorEnvelope.fields'] = Object.keys(errorEnvelope.fields);
+contractsFlat['errorEnvelope.genericCodes'] = genericCodeValues;
+contractsFlat['errorEnvelope.gateKinds'] = errorEnvelope.gate.kinds;
+contractsFlat['errorEnvelope.exposedHeaders'] = errorEnvelope.headers.exposed;
+contractsFlat['errorEnvelope.reference.serverLength'] = errorEnvelope.reference.serverLength;
+contractsFlat['errorEnvelope.reference.clientPrefix'] = errorEnvelope.reference.clientPrefix;
+contractsFlat['errorEnvelope.reference.clientLength'] = errorEnvelope.reference.clientLength;
+for (const [locale, lists] of Object.entries(genericErrorPhrases))
+  for (const mode of PHRASE_LISTS)
+    contractsFlat[`genericErrorPhrases.${locale}.${mode}`] = lists[mode];
 
 /* ---------- contracts: ESM ---------- */
 const q = (s) => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
@@ -884,6 +942,42 @@ ${enums.map((e) => `  ${e.camel}: ${e.screaming},`).join('\n')}
 /** Numeric and string bounds more than one repo enforces independently. */
 export const LIMITS = Object.freeze({
 ${Object.entries(rules).map(([k, v]) => `  ${k}: ${v},`).join('\n')}
+});
+
+/**
+ * Every kind of failure a client tells apart before choosing the words of an
+ * error (ERROR-3), with how to retry, what a write's saved state is, whether
+ * a reference is shown, and whether anything is shown at all.
+ */
+export const FAILURE_KINDS = Object.freeze({
+${failureKinds.map((k) => `  ${k.kind}: Object.freeze({ retry: ${q(k.retry)}, savedOnWrite: ${q(k.savedOnWrite)}, showReference: ${k.showReference}, toast: ${q(k.toast)}${k.where ? `, where: Object.freeze([${k.where.map(q).join(', ')}])` : ''} }),`).join('\n')}
+});
+
+/** The kind names, in contract order. */
+export const FAILURE_KIND_VALUES = Object.freeze(${jsList(failureKinds.map((k) => k.kind), '')});
+
+/** The error body every API returns (ERROR-6): field names, gate kinds, headers, references. */
+export const ERROR_ENVELOPE = Object.freeze({
+  fields: Object.freeze(${jsList(Object.keys(errorEnvelope.fields))}),
+  gateKinds: Object.freeze(${jsList(errorEnvelope.gate.kinds)}),
+  exposedHeaders: Object.freeze(${jsList(errorEnvelope.headers.exposed)}),
+  reference: Object.freeze({ serverLength: ${errorEnvelope.reference.serverLength}, clientPrefix: ${q(errorEnvelope.reference.clientPrefix)}, clientLength: ${errorEnvelope.reference.clientLength} }),
+});
+
+/**
+ * Error codes too generic to replace a more specific sentence (ERROR-6):
+ * never attached to a throw whose message is more specific, and never used
+ * by localization to overwrite one. Wire values.
+ */
+export const GENERIC_ERROR_CODES = Object.freeze(${jsList(genericCodeValues, '')});
+
+/**
+ * The wording ERROR-2 bans, per locale, normalized as
+ * contracts/rules/generic-error-phrases.json $meta.matching describes.
+ * scripts/check-error-copy.mjs in this repo implements the matching.
+ */
+export const GENERIC_ERROR_PHRASES = Object.freeze({
+${Object.entries(genericErrorPhrases).map(([locale, l]) => `  ${locale}: Object.freeze({\n${PHRASE_LISTS.map((m) => `    ${m}: Object.freeze(${jsList(l[m], '    ')}),`).join('\n')}\n  }),`).join('\n')}
 });
 
 /**
@@ -995,6 +1089,50 @@ ${enums.map((e) => `  readonly ${e.camel}: typeof ${e.screaming};`).join('\n')}
 
 export declare const LIMITS: {
 ${Object.entries(rules).map(([k, v]) => `  readonly ${k}: ${v};`).join('\n')}
+};
+
+/** How a failure kind behaves. See contracts/failure-kinds.json $meta.attributes. */
+export interface FailureKindSpec {
+  readonly retry: ${[...new Set(Object.keys(failureKindsContract.$meta.attributes.retry))].map(q).join(' | ')};
+  readonly savedOnWrite: ${Object.keys(failureKindsContract.$meta.attributes.savedOnWrite).map(q).join(' | ')};
+  readonly showReference: boolean;
+  readonly toast: ${Object.keys(failureKindsContract.$meta.attributes.toast).map(q).join(' | ')};
+  readonly where?: readonly string[];
+}
+
+export declare const FAILURE_KINDS: {
+${failureKinds.map((k) => `  readonly ${k.kind}: { readonly retry: ${q(k.retry)}; readonly savedOnWrite: ${q(k.savedOnWrite)}; readonly showReference: ${k.showReference}; readonly toast: ${q(k.toast)}${k.where ? `; readonly where: ${dtsTuple(k.where)}` : ''} };`).join('\n')}
+};
+/** Every failure kind a client classifies into (ERROR-3). */
+export type FailureKind = keyof typeof FAILURE_KINDS;
+export declare const FAILURE_KIND_VALUES: ${dtsTuple(failureKinds.map((k) => k.kind))};
+
+export declare const ERROR_ENVELOPE: {
+  readonly fields: ${dtsTuple(Object.keys(errorEnvelope.fields))};
+  readonly gateKinds: ${dtsTuple(errorEnvelope.gate.kinds)};
+  readonly exposedHeaders: ${dtsTuple(errorEnvelope.headers.exposed)};
+  readonly reference: { readonly serverLength: ${errorEnvelope.reference.serverLength}; readonly clientPrefix: ${q(errorEnvelope.reference.clientPrefix)}; readonly clientLength: ${errorEnvelope.reference.clientLength} };
+};
+/** A gate kind in \`details.gate.kind\` on a 403/402. */
+export type ErrorGateKind = (typeof ERROR_ENVELOPE)['gateKinds'][number];
+
+export declare const GENERIC_ERROR_CODES: ${dtsTuple(genericCodeValues)};
+
+/**
+ * The banned phrases of one locale: a whole message, an opening, anywhere,
+ * or an opening with no cause after it (\`causeless\`, which reads
+ * \`filler\` and \`causeWords\`).
+ */
+export interface GenericErrorPhraseList {
+  readonly whole: readonly string[];
+  readonly opening: readonly string[];
+  readonly anywhere: readonly string[];
+  readonly causeless: readonly string[];
+  readonly filler: readonly string[];
+  readonly causeWords: readonly string[];
+}
+export declare const GENERIC_ERROR_PHRASES: {
+${Object.keys(genericErrorPhrases).map((l) => `  readonly ${l}: GenericErrorPhraseList;`).join('\n')}
 };
 
 /** Shape shared by every enum contract above. */
@@ -1152,6 +1290,70 @@ abstract final class BabelLimits {
 ${Object.entries(rules)
   .map(([k, v]) => `  static const int ${dartId(k)} = ${v};`)
   .join('\n')}
+}
+
+/// Every kind of failure a client tells apart before choosing the words of
+/// an error (ERROR-3). See contracts/failure-kinds.json for each kind's
+/// meaning; the maps below give how to retry, a write's saved state, and
+/// which kinds show a reference or nothing at all.
+abstract final class BabelFailureKind {
+${failureKinds.map((k) => `  static const String ${dartId(k.camel)} = ${dartStr(k.kind)};`).join('\n')}
+
+  /// Every kind, in contract order.
+  static const List<String> values = ${dartList(failureKinds.map((k) => k.kind))};
+
+  /// Kind -> now | after | when_online | manual | dialog | reload | never | none.
+  static const Map<String, String> retry = ${dartMap(Object.fromEntries(failureKinds.map((k) => [k.kind, k.retry])))};
+
+  /// Kind -> ${Object.keys(failureKindsContract.$meta.attributes.savedOnWrite).join(' | ')}: what a failed WRITE kept.
+  static const Map<String, String> savedOnWrite = ${dartMap(Object.fromEntries(failureKinds.map((k) => [k.kind, k.savedOnWrite])))};
+
+  /// The kinds whose message shows a reference support can find (ERROR-7).
+  static const List<String> showReference = ${dartList(failureKinds.filter((k) => k.showReference).map((k) => k.kind))};
+
+  /// The kinds that show nothing (cancelled by us, or queued on the device).
+  static const List<String> silent = ${dartList(failureKinds.filter((k) => k.toast === 'silent').map((k) => k.kind))};
+
+  /// Where an [unreachable] failure happened.
+  static const List<String> unreachableWhere = ${dartList(failureKinds.find((k) => k.kind === 'unreachable')?.where ?? [])};
+
+  /// Kind -> whose server it happened on, for the kinds that say
+  /// (app_server: a web app's own server; api).
+  static const Map<String, List<String>> where = <String, List<String>>{
+${failureKinds.filter((k) => k.where).map((k) => `    ${dartStr(k.kind)}: ${dartList(k.where, '    ')},`).join('\n')}
+  };
+}
+
+/// The error body every API returns (ERROR-6).
+abstract final class BabelErrorEnvelope {
+  /// Field names, top level and \`details.*\`.
+  static const List<String> fields = ${dartList(Object.keys(errorEnvelope.fields))};
+
+  /// \`details.gate.kind\` values on a 403/402 (ERROR-5).
+  static const List<String> gateKinds = ${dartList(errorEnvelope.gate.kinds)};
+
+  /// Error codes too generic to replace a more specific sentence. Wire values.
+  static const List<String> genericCodes = ${dartList(genericCodeValues)};
+
+  /// Characters of the logged request id a server \`reference\` carries.
+  static const int referenceServerLength = ${errorEnvelope.reference.serverLength};
+
+  /// A client-minted reference: this prefix plus [referenceClientLength] upper-case hex characters.
+  static const String referenceClientPrefix = ${dartStr(errorEnvelope.reference.clientPrefix)};
+  static const int referenceClientLength = ${errorEnvelope.reference.clientLength};
+}
+
+/// The wording ERROR-2 bans, per locale, normalized as
+/// contracts/rules/generic-error-phrases.json \`\$meta.matching\` describes
+/// (lower case, straight apostrophes, single spaces). A Dart guard matches a
+/// normalized message: [whole] = the message is the phrase, [opening] = it
+/// starts with it at a word boundary, [anywhere] = it contains it,
+/// [causeless] = it starts with it and every later clause is a [filler]
+/// (no [causeWords] in the first clause).
+abstract final class BabelGenericErrorPhrases {
+  static const List<String> locales = ${dartList(Object.keys(genericErrorPhrases))};
+
+${PHRASE_LISTS.map((m) => `  static const Map<String, List<String>> ${m} = <String, List<String>>{\n${Object.entries(genericErrorPhrases).map(([l, lists]) => `    ${dartStr(l)}: ${dartList(lists[m], '    ')},`).join('\n')}\n  };`).join('\n\n')}
 }
 
 /// Resolve one wire value against a contract: an alias maps to its canonical
@@ -1317,7 +1519,8 @@ if (CHECK_ONLY) {
     + `✓ contracts  ${Object.keys(errorCodes.codes).length} error codes, `
     + `${Object.keys(fieldErrorCodes.codes).length} field-error codes, `
     + `${enums.length} enums (${enums.reduce((n, e) => n + e.values.length, 0)} values), `
-    + `${Object.keys(rules).length} limits\n`
+    + `${Object.keys(rules).length} limits, ${failureKinds.length} failure kinds, `
+    + `${genericCodeValues.length} generic codes, generic error phrases in ${Object.keys(genericErrorPhrases).length} locales\n`
     + `✓ principles ${Object.keys(principles).length} rules across ${scopes.join(', ')}\n`
     + `  → ${outputs.map(([p]) => rel(p)).join('  ')}`,
   );

@@ -1,0 +1,96 @@
+{
+  "$meta": {
+    "name": "Error envelope",
+    "description": "The shape of every error body an API returns (ERROR-6), and the codes too generic to replace a more specific sentence. Clients read the facts their copy needs from these fields; they never parse the English `message` for meaning.",
+    "owner": "server",
+    "provenance": {
+      "measuredOn": "2026-10-20",
+      "babel": "babel-lambda-api error.middleware.ts sends status, errorCode, message, details and fieldErrors; `reference` sits only in details.reference, and only on driver faults. A top-level reference on every 5xx is wave A of the clear-errors program.",
+      "rendee": "groome-nodeJS apps/api sends requestId on every error body and an errorCode on very few. `reference` is added beside requestId."
+    },
+    "compatibilityNote": "Every field below except status, errorCode and message is optional and additive. Released clients ignore a field they do not know, so adding one is safe; changing a status code that released mobile clients parse is not, and goes behind a client opt-in."
+  },
+  "fields": {
+    "status": {
+      "type": "boolean",
+      "required": true,
+      "doc": "Always false on an error. A body without a boolean status is not our envelope (a gateway or CDN page): the client classifies it as front_door, timeout, rate_limited, too_large or outdated_client from the HTTP status (ERRORS.md section 4, step 3)."
+    },
+    "errorCode": {
+      "type": "string",
+      "required": true,
+      "doc": "A code as specific as the message (COPY-2). Clients switch on it and render their own localized copy. See error-codes.json."
+    },
+    "message": {
+      "type": "string",
+      "required": true,
+      "doc": "The server's sentence, localized for the caller where the server can. A client shows it only when it is localized and the code is not in genericCodes."
+    },
+    "details": {
+      "type": "object",
+      "required": false,
+      "doc": "The facts the copy needs: the gate, the field, the entity, the provider. Shapes below."
+    },
+    "details.gate": {
+      "type": "object",
+      "required": false,
+      "doc": "On a 403 (and a 402): which gate refused, so the client names it (ERROR-5) and never guesses (TRUTH-1). See `gate`."
+    },
+    "details.committed": {
+      "type": "boolean",
+      "required": false,
+      "doc": "On a 5xx (and DATABASE_BUSY) for a write: false only when the server proves nothing was kept (the whole path ran in one transaction and it rolled back), so the client may say \"nothing was saved\". Absent means the server cannot tell (a connection lost after COMMIT, a step saved before the failure): the client says the outcome is unknown (ERROR-4). A server that knows it kept part answers partial instead."
+    },
+    "fieldErrors": {
+      "type": "array",
+      "required": false,
+      "doc": "On a 400/422: one entry per field, with an error.field.* code and its params. See field-error-codes.json."
+    },
+    "retryAfterSeconds": {
+      "type": "integer",
+      "required": false,
+      "doc": "On a 429 or 503: when a retry is allowed. The same value as the Retry-After header, for clients that cannot read headers.",
+      "alsoReadFrom": ["details.retryAfterSeconds", "header:Retry-After", "header:RateLimit-Reset"]
+    },
+    "reference": {
+      "type": "string",
+      "required": false,
+      "doc": "On every 5xx (ERROR-7): the first `reference.serverLength` characters of the logged request id, written to the same log line. Shown to the person with a way to copy it.",
+      "alsoReadFrom": ["details.reference", "requestId", "header:x-request-id"]
+    }
+  },
+  "gate": {
+    "kinds": ["permission", "role", "plan", "device", "occupancy", "company", "setup"],
+    "fields": {
+      "kind": "One of `gate.kinds`.",
+      "required": "The permissions that would pass, as `<section>.<action>` strings.",
+      "roles": "The roles that hold them, as role keys the client translates.",
+      "grantor": "Who can grant it, as a role key (for example `president`), never a person's name."
+    }
+  },
+  "headers": {
+    "exposed": ["Retry-After", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "x-request-id"],
+    "doc": "Every API lists these in its CORS exposed headers, so a browser client can read them."
+  },
+  "reference": {
+    "serverLength": 8,
+    "clientPrefix": "E-",
+    "clientLength": 6,
+    "doc": "A server reference is 8 characters of the logged request id. A client that has no server reference (a crash, a server that did not answer) mints `E-` plus 6 uppercase hex characters and sends it to its crash reporter under the same id."
+  },
+  "genericCodes": [
+    "VALIDATION_ERROR",
+    "PERMISSION_DENIED",
+    "INVALID_ID",
+    "NOT_FOUND",
+    "INTERNAL_ERROR",
+    "CONFLICT",
+    "SERVICE_UNAVAILABLE",
+    "RATE_LIMITED",
+    "UNAUTHORIZED",
+    "INVALID_USER",
+    "PAYMENT_FAILED",
+    "DATABASE_BUSY"
+  ],
+  "genericCodesNote": "Names in error-codes.json. A code listed here never replaces a more specific sentence: the server does not attach it to a throw whose message is more specific, and localization never swaps such a message for the code's catalogue line (ERROR-6)."
+}

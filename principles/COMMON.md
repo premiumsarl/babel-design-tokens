@@ -165,6 +165,155 @@ Never format money or dates inline.
 
 The client names its own buttons in the user's language.
 
+## Errors: say what failed, why, what to do, and what was kept
+
+An error message is the product talking at the worst moment. It must leave the
+person knowing exactly what happened to their work (owner ruling, 2026-10-20:
+"Let's make sure errors are clear for the user. Nothing this generic is
+acceptable."). Prevent the error first (`PREVENT-1` to `PREVENT-6`); these
+rules cover what is left. The vocabulary, detection per platform, wording
+patterns and guards are in [ERRORS.md](../ERRORS.md).
+
+### ERROR-1 · Every error answers four questions
+
+1. **What failed**, in terms of the person's action and object: "The invoice
+   was not saved", "The sign-in code could not be sent", "The bookings did not
+   load". Never "an error".
+2. **Why**, as specifically as the system knows: no connection; which server
+   did not answer, and within how many seconds; maintenance until when; the
+   session ended; the gate that refused (`ERROR-5`); which field, and how to
+   fix it; what changed and who changed it; what no longer exists; when a
+   retry is allowed; a bug on our side, with its reference (`ERROR-7`).
+3. **What to do now**: one next step. Retry now; retry in N seconds (or at
+   HH:MM); sign in again; reconnect; reload; go back to the list; ask the
+   person who can grant access; contact support with the reference; or
+   nothing, because it was saved or queued.
+4. **Whether the data is safe**: saved, not saved, partly saved (which part),
+   or unknown (`ERROR-4`). A read says that nothing saved is affected.
+
+The title says what failed. The body says why, what was kept, and what to do.
+A title and its body never repeat each other. Every part goes through the
+translation layer (`COPY-5`). Offer only the actions that can work in this
+state: no "Sign in again" when the server is down, and no link to another page
+served by the same server that is not answering.
+
+### ERROR-2 · No generic error wording, in any locale
+
+A message may not say only, or open with, "Something went wrong", "An error
+occurred", "Unexpected error", "Oops", "Error", "Failed", "Request failed",
+"Internal server error", "Network error", "Unknown error", "Try again later",
+or the same phrases in another locale ("Une erreur est survenue",
+"Erreur inconnue", "Réessayez plus tard", "Algo salió mal", "出现错误",
+"请稍后重试", …). The list per locale is
+`contracts/rules/generic-error-phrases.json`, in three parts: a whole message,
+an opening, and a phrase banned anywhere. "Later", "shortly" and "in a moment"
+never replace a time the system knows. A one-word status badge ("Failed" on a
+payment row) is a status, not a message: its reason must be one tap or one
+hover away.
+
+### ERROR-3 · The client classifies the failure before choosing the words
+
+Every client maps every failure to one kind from
+`contracts/failure-kinds.json`: offline, unreachable, intercepted, timeout,
+front door, unavailable, rate limited, busy, session ended, step-up,
+forbidden, plan, not yet, validation, conflict, not found, too large,
+outdated client, server bug, client bug, unreadable success, partial,
+cancelled or queued.
+It then builds the copy from three things: the action, the kind and the
+saved state. A raw transport text ("Network Error", "Failed to fetch",
+"Request failed with status code 502"), a gateway or CDN body, or an
+exception's text never reaches the screen. A cancelled request shows nothing.
+A queued offline change is a confirmation, not an error. A 2xx the client
+could not read is a success it failed to show, never "nothing was sent".
+
+### ERROR-4 · An unknown outcome is said as unknown
+
+When a write was sent and no usable answer came back (a timeout, a connection
+lost after sending, a gateway 502/504, or a 500 that does not prove a
+rollback), the client does not know whether it was saved, and it says so: "It
+may have been saved — check before trying again." For money it says: "Do not
+pay again; check your payments in a few minutes." The words "not saved" are
+used only when that is certain: the request provably never left the device,
+or the server refused it with a 4xx, or the server proved it rolled back
+(`details.committed: false`). A device that reports no connection at the
+moment of the error does not prove the request never left. A server that
+answers 5xx after committing must say what it kept (the partial kind) instead
+of a plain failure.
+
+### ERROR-5 · A denial names the permission and who can grant it
+
+`COPY-1`, applied to the message. A 403 says which permission or role was
+missing ("Only members with the Accounting permission can approve bills").
+It says where, when that matters ("in Tour Laval"), and who can grant it
+("your President"). A plan gate, a setup gate, a device confirmation and a
+missing selection each have their own message, and none of them says
+"permission denied". The server sends the gate; the client never guesses it
+(`TRUTH-1`).
+
+### ERROR-6 · The server's error carries a code as specific as its message, and the facts the copy needs
+
+`COPY-2`, made complete. Every error body uses the envelope in
+`contracts/error-envelope.json`: `errorCode`, `message`, and where they apply
+`details` (gate, field, entity, provider), `fieldErrors`, `retryAfterSeconds`
+and `reference`.
+- A generic code (`contracts/error-envelope.json` → `genericCodes`) is never
+  attached to a throw whose sentence is more specific.
+- Localization never replaces a specific sentence with a generic code's
+  catalogue line.
+- A 503 means nothing was done and it carries `Retry-After`. A 500 sets
+  `details.committed: false` only when it rolled back everything; a 500 that
+  kept part is a partial; any other 500 leaves the outcome unknown, because
+  the server cannot always know whether it committed.
+- An unknown route answers in the envelope, never as an HTML page.
+- A status code that released clients parse changes only behind a client
+  opt-in, until every client that reads the old one is gone.
+
+### ERROR-7 · Every failure on our side shows a reference that support can find
+
+- Every 5xx returned to a client carries a top-level `reference`, which is
+  also written to the log line.
+- A client crash mints its own reference and sends it to the crash reporter
+  under the same id.
+- Every reference a client mints reaches a store support can query: the
+  crash reporter, an error sink that is not consent-gated, or a queue the
+  client flushes to its own server's log endpoint once that server answers
+  again. A reference that lives only in the browser is not shown; until it
+  can be, the message gives the time the failure started instead.
+- The reference is shown on server bugs, front-door failures, unavailable
+  services and client bugs, with a way to copy it.
+- "Our team has been notified" is written only where an alert really fires.
+  An analytics event or a captured exception is not an alert: drop the
+  sentence instead (owner decision, 2026-10-20).
+
+### ERROR-8 · The last-resort message still owns the fault and gives a next step
+
+When nothing more specific is known, the fallback still says what failed (the
+action), says plainly that the problem is on our side, states the saved state
+(not saved / unknown), gives the reference and gives one next step (try again;
+if it repeats, contact support with the reference). A fallback is never shared
+copy that ignores the action.
+
+### ERROR-9 · Waiting and retrying say what is not answering, and since when
+
+An automatic retry names what is not answering (this device's connection, the
+app's own server, or the service behind it). It says since when, how many
+attempts were made, and when the next one is. "Still not responding" is never
+shown alone. A rate limit counts down from the server's retry time. Offline
+waits for the connection and says so. After a limit set per brand, automatic
+retries stop and the message says so, with the reference and the support
+contact.
+
+### ERROR-10 · A guard fails the build on new generic error wording
+
+Each app runs a check over its catalogues and its error-rendering code
+(`scripts/check-error-copy.mjs` in this package, vendored, or its twin on a
+platform it cannot run on). It counts `ERROR-2` phrases, titles equal to or
+repeated by their bodies, raw exception or transport text rendered, and calls
+that fall back to a shared generic key. Its baseline is exact and per key: a
+new key or string holding a generic phrase fails at once, whatever the totals;
+a count that rises fails; and a count that falls fails until the baseline is
+lowered to match (`DONE-6`).
+
 ## Truth: one source for every rule and vocabulary
 
 ### TRUTH-1 · Show the server's decision; never re-derive it

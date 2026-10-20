@@ -4,7 +4,8 @@ Single source of truth for three things:
 
 - **design tokens** — black core + bronze accent (`#B08D57`), as CSS custom properties (admin panel + website) and Dart constants (mobile);
 - **shared contracts** — the wire vocabulary (error codes, enums, bounds) shared by `babel-lambda-api`, `babel-admin-panel` and `babel-mobile`;
-- **UX principles** — the rules every Premium SARL brand follows ([principles/COMMON.md](./principles/COMMON.md)), and one file per brand beside it ([principles/BABEL.md](./principles/BABEL.md), …).
+- **UX principles** — the rules every Premium SARL brand follows ([principles/COMMON.md](./principles/COMMON.md)), and one file per brand beside it ([principles/BABEL.md](./principles/BABEL.md), …);
+- **the error-copy standard** — `ERROR-1` to `ERROR-10`, with its vocabulary in **[ERRORS.md](./ERRORS.md)**: failure kinds, the error envelope, the banned generic phrases, and the scanner every app vendors.
 
 See **[DESIGN.md](./DESIGN.md)** for Babel's token values (palette, type, spacing, motion, governance),
 **[Contracts](#contracts)** below for the vocabulary half, and **[principles/README.md](./principles/README.md)** for how the principles work.
@@ -17,13 +18,18 @@ contracts/                  ← shared vocabulary: the ONLY files you edit
   error-codes.json          → the `error.<domain>.<action>` catalogue
   field-error-codes.json    → the `error.field.*` family + their params
   enums/*.json              → one file per enum (values, aliases, deprecated, subsets)
+  failure-kinds.json        → the failure kinds a client classifies into (ERROR-3)
+  error-envelope.json       → the error body every API returns, and its generic codes (ERROR-6)
   rules/*.json              → numeric + string bounds more than one repo enforces
+  rules/generic-error-phrases.json → the wording ERROR-2 bans, per locale
 principles/                 ← UX principles: the ONLY files you edit (see principles/README.md)
   COMMON.md                 → the rules every brand follows
   <BRAND>.md                → one file per brand (BABEL.md, …)
 build.mjs                   ← generator (no deps): resolves aliases, emits the outputs
                               `--check` compares instead of writing
 scripts/check-tokens.mjs    ← the drift ratchet (fails on new raw color literals; consumers vendor it)
+scripts/check-error-copy.mjs ← the error-copy guard (fails on new generic error wording; consumers vendor it)
+ERRORS.md                   ← the error standard's vocabulary: kinds, detection, wording, guards
 scripts/check-contrast.mjs  ← the WCAG gate
 scripts/check-contracts.mjs ← the contract invariants (see Contracts below)
 scripts/principles.mjs      ← the principles parse (rule headings, ID shapes, cross-references)
@@ -112,7 +118,10 @@ file:line provenance).
 
 | Contract | Why |
 |---|---|
-| `error-codes.json` | 215 codes the API can return. Admin ships 172 translations, mobile 125 — and mobile names only 21 of them in code. 13 have no translation in the API's own map. |
+| `error-codes.json` | 510 codes (507 the API declares on 2026-10-20, plus 3 it retired, kept until no client names them). Admin ships 322 translations, mobile 239. 13 have no translation in the API's own map. |
+| `failure-kinds.json` | The 24 kinds of failure a client tells apart before choosing words (`ERROR-3`), each with how to retry, what a failed write kept, and whether a reference shows, plus `classify`: the ordered code and status rules that map an error envelope to a kind. Admin, mobile and Rendee classified failures three different ways, and a null kind is what printed "Something went wrong" twice on Rendee's admin. |
+| `error-envelope.json` | The error body (`ERROR-6`): fields, the gate on a 403, references, exposed headers, and the 12 `genericCodes` that must never overwrite a more specific sentence. |
+| `rules/generic-error-phrases.json` | The wording `ERROR-2` bans, in 11 locales, as whole messages, openings and phrases banned anywhere. Read by every app's error-copy guard. |
 | `field-error-codes.json` | The 16 `error.field.*` codes on a 400. **Neither client ships a single translation for any of them**, and mobile discards the `code` and `params` at parse, so it could not localize them today even if the keys existed. |
 | `enums/notification-type.json` | API 124 · mobile 129 · admin **79**. 45 server notification types have no entry in admin's `TYPE_GROUPS`, so they are invisible and unsettable on the web preference screen. |
 | `enums/task-status.json` | Four spellings inside the API alone. `WRITABLE_TASK_STATUSES` is hand-listed rather than composed from the two per-type sets; admin carries a second bare-lowercase vocabulary in `status-badges.ts`. |
@@ -234,7 +243,13 @@ silently to the *last* one, deleting a code) · two names sharing one wire value
 an alias colliding with a canonical **or** deprecated value · an alias pointing
 at nothing · a subset member outside `values` · a value both canonical and
 deprecated · a case-insensitive collision · an off-convention code · a
-non-integer or misnamed rule · a `min` above its `max`.
+non-integer or misnamed rule · a `min` above its `max` · a failure kind missing
+retry / savedOnWrite / showReference / toast, or ERRORS.md's kind table drifting
+from the contract (names, retry, saved state, reference) · a `classify` rule that
+names no kind, infers an outage from an `_unavailable` suffix, misses a
+not-found code, or differs from ERRORS.md section 4 · a generic code that is not in `error-codes.json` · a locale
+with no phrase list, an empty list, a phrase that is not normalized or that the
+scanner does not catch · a rule ID in ERRORS.md that `principles/` does not define.
 
 The alias-collision check is the one worth naming: an alias that *is* a canonical
 value is a silent no-op — the rename it was written to apply simply never
@@ -284,6 +299,13 @@ do not import these — they hold **copies**:
 | --- | --- | --- |
 | babel-admin-panel | `scripts/check-tokens.mjs` | `src/.token-baseline.json` |
 | babel-website | `scripts/check-tokens.mjs` | `.token-baseline.json` |
+
+`scripts/check-error-copy.mjs` (`ERROR-10`) is vendored the same way, with
+an `error-copy.config.json` and an exact baseline beside it; see
+[ERRORS.md §8](./ERRORS.md#8--the-guard-scriptscheck-error-copymjs-error-10).
+Its own test is `npm run check:error-copy` (fixtures in
+`scripts/__fixtures__/error-copy/`). A repo without the npm dependency
+(Rendee) vendors `contracts/rules/generic-error-phrases.json` beside it.
 
 babel-mobile does **not** vendor this script; its equivalent is
 `test/design/color_drift_test.dart`, which asserts **equality** rather than an
