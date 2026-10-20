@@ -26,6 +26,15 @@
  *        · deprecated disjoint from values
  *        · code values match their declared convention
  *        · identifiers survive the Dart transform uniquely
+ *        · failure kinds: every kind declares retry / savedOnWrite /
+ *          showReference / toast from the declared vocabulary, and ERRORS.md
+ *          documents exactly these kinds
+ *        · the error envelope: genericCodes ⊂ error-codes.json, every field
+ *          typed and documented, status/errorCode/message required
+ *        · the generic error phrases: every required locale present, no
+ *          empty list where one is required, no duplicate, every phrase
+ *          already normalized and caught by the scanner as a message
+ *        · ERRORS.md cites only rule IDs principles/ defines
  *
  * Run: node scripts/check-contracts.mjs
  */
@@ -33,6 +42,8 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { normalize, matchGeneric } from './check-error-copy.mjs';
+import { readPrinciples } from './principles.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACTS = join(ROOT, 'contracts');
@@ -238,12 +249,15 @@ const ruleFiles = existsSync(ruleDir)
   ? readdirSync(ruleDir).filter((f) => f.endsWith('.json')).sort()
   : [];
 const allRules = {};
+const phraseFiles = [];
 for (const f of ruleFiles) {
   const where = `rules/${f}`;
   const dups = duplicateKeys(readRaw(join(ruleDir, f)));
   if (dups.length) fail(where, `duplicate JSON key(s): ${dups.join(', ')}`);
 
   const c = readJson(join(ruleDir, f));
+  if (c.phrases) { phraseFiles.push(f); continue; }
+  if (!c.rules) { fail(where, 'holds neither `rules` (bounds) nor `phrases` (generic error phrases); build.mjs would refuse it'); continue; }
   for (const [k, v] of Object.entries(c.rules ?? {})) {
     if (k in allRules) fail(where, `rule "${k}" is also declared in ${allRules[k]}`);
     allRules[k] = f;
@@ -260,6 +274,125 @@ for (const f of ruleFiles) {
       fail(where, `${k} (${c.rules[k]}) is greater than ${maxKey} (${c.rules[maxKey]})`);
   }
   ok(`${where} — ${Object.keys(c.rules ?? {}).length} bounds, integer + uniquely named`);
+}
+
+/* ── 5. failure kinds ───────────────────────────────────────────────────── */
+console.log('\nFAILURE KINDS');
+{
+  const where = 'failure-kinds.json';
+  const path = join(CONTRACTS, where);
+  const dups = duplicateKeys(readRaw(path));
+  if (dups.length) fail(where, `duplicate JSON key(s): ${dups.join(', ')}`);
+  const c = readJson(path);
+  const attrs = c.$meta?.attributes ?? {};
+  const kinds = Object.entries(c.kinds ?? {});
+  if (kinds.length === 0) fail(where, 'no kinds: an empty vocabulary classifies nothing');
+  if (!c.$meta?.description) fail(where, '$meta.description is required');
+  for (const [kind, k] of kinds) {
+    if (!/^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(kind)) fail(where, `kind "${kind}" must be snake_case (it is a wire value and a Dart lowerCamel constant)`);
+    if (!k.meaning) fail(where, `kind "${kind}" has no meaning`);
+    for (const attr of ['retry', 'savedOnWrite', 'toast']) {
+      if (!(attr in k)) fail(where, `kind "${kind}" does not declare ${attr}`);
+      else if (!(k[attr] in (attrs[attr] ?? {}))) fail(where, `kind "${kind}": ${attr} "${k[attr]}" is not one of ${Object.keys(attrs[attr] ?? {}).join(', ')}`);
+    }
+    if (typeof k.showReference !== 'boolean') fail(where, `kind "${kind}" must declare showReference as true or false`);
+    if ('where' in k && (!Array.isArray(k.where) || k.where.length === 0 || dupsOf(k.where).length)) fail(where, `kind "${kind}": where must be a non-empty list without repeats`);
+  }
+  const camels = kinds.map(([kind]) => kind.replace(/_(.)/g, (_, x) => x.toUpperCase()));
+  const dupCamel = dupsOf(camels);
+  if (dupCamel.length) fail(where, `Dart identifier collision: ${dupCamel.join(', ')}`);
+  const reserved = ['values', 'retry', 'savedOnWrite', 'showReference', 'silent', 'unreachableWhere'];
+  const clash = camels.filter((n) => reserved.includes(n));
+  if (clash.length) fail(where, `kind name(s) collide with a BabelFailureKind member: ${clash.join(', ')}`);
+
+  // ERRORS.md documents the kinds in one table; it must list exactly these.
+  const doc = readRaw(join(ROOT, 'ERRORS.md'));
+  const table = [...doc.matchAll(/^\| `([a-z_]+)` \|/gm)].map((m) => m[1]);
+  const names = kinds.map(([kind]) => kind);
+  const missingDoc = names.filter((n) => !table.includes(n));
+  const extraDoc = table.filter((n) => !names.includes(n));
+  if (missingDoc.length) fail('ERRORS.md', `the failure-kind table lacks: ${missingDoc.join(', ')}`);
+  if (extraDoc.length) fail('ERRORS.md', `the failure-kind table lists kinds the contract does not: ${extraDoc.join(', ')}`);
+  ok(`${where} — ${kinds.length} kinds, each with retry/savedOnWrite/showReference/toast; ERRORS.md lists the same ${table.length}`);
+}
+
+/* ── 6. error envelope ──────────────────────────────────────────────────── */
+console.log('\nERROR ENVELOPE');
+{
+  const where = 'error-envelope.json';
+  const path = join(CONTRACTS, where);
+  const dups = duplicateKeys(readRaw(path));
+  if (dups.length) fail(where, `duplicate JSON key(s): ${dups.join(', ')}`);
+  const c = readJson(path);
+  const codes = readJson(join(CONTRACTS, 'error-codes.json')).codes;
+  const generic = c.genericCodes ?? [];
+  if (generic.length === 0) fail(where, 'genericCodes is empty');
+  const outside = generic.filter((n) => !(n in codes));
+  if (outside.length) fail(where, `genericCodes not in error-codes.json: ${outside.join(', ')}`);
+  const dupG = dupsOf(generic);
+  if (dupG.length) fail(where, `genericCodes repeats: ${dupG.join(', ')}`);
+  const fields = c.fields ?? {};
+  for (const req of ['status', 'errorCode', 'message']) {
+    if (fields[req]?.required !== true) fail(where, `field "${req}" must be required`);
+  }
+  for (const [name, f] of Object.entries(fields)) {
+    if (!f.type || !f.doc || typeof f.required !== 'boolean') fail(where, `field "${name}" needs type, required (true/false) and doc`);
+    if (name.includes('.') && !(name.split('.')[0] in fields)) fail(where, `field "${name}" nests under a field the envelope does not declare`);
+    for (const alt of f.alsoReadFrom ?? []) {
+      if (!alt.startsWith('header:') && !/^[a-z][A-Za-z.]*$/.test(alt)) fail(where, `field "${name}": alsoReadFrom "${alt}" is neither a body path nor header:<Name>`);
+    }
+  }
+  const gateKinds = c.gate?.kinds ?? [];
+  if (gateKinds.length === 0 || dupsOf(gateKinds).length) fail(where, 'gate.kinds must be a non-empty list without repeats');
+  for (const k of ['serverLength', 'clientLength']) {
+    if (!Number.isInteger(c.reference?.[k]) || c.reference[k] < 4) fail(where, `reference.${k} must be an integer of at least 4`);
+  }
+  if (!c.reference?.clientPrefix) fail(where, 'reference.clientPrefix is required');
+  ok(`${where} — ${Object.keys(fields).length} fields, ${generic.length} generic codes all in error-codes.json`);
+}
+
+/* ── 7. generic error phrases ───────────────────────────────────────────── */
+console.log('\nGENERIC ERROR PHRASES');
+{
+  // en, fr, es, zh: Babel's admin + mobile and Rendee; pt: Babel's website;
+  // the rest: Babel's chatbot. A guard for a locale with no list checks nothing.
+  const REQUIRED = ['en', 'fr', 'es', 'zh', 'pt', 'ar', 'de', 'it', 'ja', 'ko', 'ru'];
+  if (phraseFiles.length !== 1) fail('rules/', `expected exactly one phrases file, found ${phraseFiles.length}: ${phraseFiles.join(', ')}`);
+  for (const f of phraseFiles) {
+    const where = `rules/${f}`;
+    const c = readJson(join(ruleDir, f));
+    const missing = REQUIRED.filter((l) => !(l in c.phrases));
+    if (missing.length) fail(where, `missing locale(s): ${missing.join(', ')}`);
+    let n = 0;
+    for (const [locale, lists] of Object.entries(c.phrases)) {
+      for (const mode of ['whole', 'opening', 'anywhere']) {
+        const list = lists[mode];
+        if (!Array.isArray(list)) { fail(where, `${locale}.${mode} must be a list`); continue; }
+        if (mode !== 'whole' && list.length === 0) fail(where, `${locale}.${mode} is empty: that locale's guard would catch nothing`);
+        const dupP = dupsOf(list);
+        if (dupP.length) fail(where, `${locale}.${mode} repeats: ${dupP.join(', ')}`);
+        for (const phrase of list) {
+          n += 1;
+          if (normalize(phrase) !== phrase) fail(where, `${locale}.${mode} "${phrase}" is not normalized (expected "${normalize(phrase)}"); it would never match`);
+          // Each phrase, said as a whole message, must be caught in its own locale.
+          else if (!matchGeneric(c.phrases, phrase, [locale])) fail(where, `${locale}.${mode} "${phrase}" is not caught by check-error-copy.mjs as a message`);
+        }
+      }
+    }
+    ok(`${where} — ${Object.keys(c.phrases).length} locales, ${n} phrases, normalized and each caught by the scanner`);
+  }
+}
+
+/* ── 8. ERRORS.md cites only defined rules ──────────────────────────────── */
+console.log('\nERRORS.md');
+{
+  const { principles } = readPrinciples(join(ROOT, 'principles'));
+  const doc = readRaw(join(ROOT, 'ERRORS.md'));
+  const cited = [...new Set([...doc.matchAll(/`([A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-[1-9]\d*)`/g)].map((m) => m[1]))];
+  const dangling = cited.filter((id) => !principles[id]);
+  if (dangling.length) fail('ERRORS.md', `cites rule ID(s) no principles file defines: ${dangling.join(', ')}`);
+  if (/^### [A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-[1-9]\d* · /m.test(doc)) fail('ERRORS.md', 'holds a rule heading; rules live in principles/, ERRORS.md only cites them');
+  ok(`ERRORS.md — ${cited.length} cited rule IDs, all defined`);
 }
 
 /* ── report ─────────────────────────────────────────────────────────────── */

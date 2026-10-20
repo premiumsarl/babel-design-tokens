@@ -112,6 +112,40 @@ destructive. A "cancel" that only closes a dialog is not, and neither is
 signing out. On mobile a destructive confirm uses the heavy vibration and the
 verb in the error text colour. Applies `CONFIRM-1`.
 
+## Errors
+
+### BABEL-ERROR-1 · Babel's error measurements
+
+- Locales: the admin panel and the mobile app use 4 (en, fr, es, zh,
+  `BABEL-LANG-1`). The website uses 5 (adds pt). The chatbot uses its 11. A
+  new error key lands in every locale in the same pull request.
+- Babel may name itself: "Babel's server did not answer within 30 s."
+- Time limits the copy must quote truthfully:
+  - admin proxy: 30 s, or 65 s on AI paths;
+  - API Lambda: 60 s;
+  - production REST gateway integration: 29 s;
+  - mobile Dio: 30 s connect, receive and send.
+  A write that hits any of these is an unknown outcome (`ERROR-4`).
+- Support contact shown with a reference: help@babel.management.
+- References: the server sends 8 characters (`reference`; shipped clients
+  also read `details.reference`). Client crashes mint `E-XXXXXX`.
+- Automatic retries stop after 5 minutes (`ERROR-9`).
+- "Our team has been notified" is not written anywhere in Babel today: no
+  alert fires on a client or server bug, only an analytics event (`ERROR-7`).
+- A status code mobile 0.64.0 parses (401, 403, 409, 500 on the auth and gate
+  paths) changes only behind a client opt-in header until a mobile release
+  that reads the new one is widely installed (`ERROR-6`).
+
+Implements `ERROR-1`, `ERROR-6`, `ERROR-7` and `ERROR-9`.
+
+### BABEL-ERROR-2 · Money errors always state where the money is
+
+A failure on a payment, refund, autopay, bank link or card says one of three
+things: "No money moved", "{amount} was charged", or "We can't confirm yet —
+do not pay again". It names the provider when the provider is the cause
+(Stripe, Plaid, the bank). A failed bank link is never called a failed
+payment. Applies `ERROR-1` and `ERROR-4`.
+
 ## Verification
 
 ### BABEL-DONE-1 · Smoke on dev, as the approved seats only

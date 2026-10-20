@@ -18,7 +18,8 @@
 //      silently; with VERIFY_STRICT set, verify fails at the end, naming
 //      every skip
 //   5. self-tests: the ratchet's scope, the Dart codegen (shadow lengths,
-//      no private or reserved-word names), and the principles parse
+//      no private or reserved-word names), the principles parse, and the
+//      error-copy scanner (check-error-copy.mjs)
 //   6. npm/pub version parity (package.json == dart/pubspec.yaml), and the
 //      version has a dart/CHANGELOG.md entry
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -128,6 +129,7 @@ if (!onPath('dart')) {
 run('ratchet scope (test files excluded, real literals counted)', 'node', ['scripts/__tests__/ratchet-scope.test.mjs']);
 run('Dart codegen (shadow lengths exact or refused, no private or reserved-word names)', 'node', ['scripts/__tests__/dart-codegen.test.mjs']);
 run('principles parse (every refusal fires, principles/ parses clean)', 'node', ['scripts/__tests__/principles.test.mjs']);
+run('error-copy scanner (catches generic copy, exact baseline, ERRORS.md passes its own check)', 'node', ['scripts/__tests__/error-copy.test.mjs']);
 
 console.log('\n▶ version parity (package.json == dart/pubspec.yaml) + CHANGELOG entry');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;

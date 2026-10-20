@@ -1,0 +1,198 @@
+{
+  "$meta": {
+    "name": "FailureKind",
+    "description": "Every kind of failure a client must tell apart before it chooses the words of an error (ERROR-3). A client maps each failure to exactly one kind, then builds the copy from the action, the kind and the saved state. Brand-neutral: every Premium SARL brand uses the same kinds.",
+    "owner": "client",
+    "ownerNote": "Clients own this list: it classifies what the CLIENT saw (no answer, a gateway page, an envelope, a crash), not what the server sent. The server's half is error-envelope.json. Detection per platform is in ERRORS.md, section 3.",
+    "onUnknown": "reject",
+    "onUnknownNote": "A kind is never invented at a call site. A failure that fits none of these is client_bug, which still shows a reference (ERROR-8).",
+    "attributes": {
+      "retry": {
+        "now": "Retrying at once can work; offer Try again.",
+        "after": "Retry after a delay: Retry-After / retryAfterSeconds when the server sent one, else the brand's backoff (ERROR-9). Automatic only for reads, or writes that carry an idempotency key.",
+        "when_online": "Wait for the device's connection; say so once, and do not toast each action.",
+        "manual": "Only the person can act: sign in, reload to see someone else's change, retry the remaining items.",
+        "dialog": "Open the step-up (re-authentication) dialog, then repeat the request.",
+        "reload": "Reload the page or update the app; nothing else can work.",
+        "never": "Retrying the same request cannot work: fix the input, ask for access, change plan, or go back.",
+        "none": "Nothing to retry, because nothing is shown (cancelled) or nothing failed (queued)."
+      },
+      "savedOnWrite": {
+        "no": "Certain that nothing was saved: the request never left the device, the server refused it with a 4xx, or it answered after rolling back.",
+        "unknown": "The request may have reached the server and no answer came back. Say it may have been saved, and send the person to check before trying again (ERROR-4).",
+        "partial": "Some items were saved and some were not; say which.",
+        "pending": "Saved on the device and waiting to sync: a confirmation, not an error."
+      },
+      "showReference": "true when the message must show a reference support can find (ERROR-7): the server's `reference`, or one the client mints and sends to its crash reporter under the same id.",
+      "toast": {
+        "visible": "The failure is shown.",
+        "silent": "Nothing is shown: the request was cancelled by us, or the change was queued."
+      }
+    }
+  },
+  "kinds": {
+    "offline": {
+      "meaning": "The device has no network.",
+      "retry": "when_online",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "unreachable": {
+      "meaning": "The device is online, but our server refused the connection or could not be found. `where` says which server: `app_server` (a web app's own server, such as a Next.js admin) or `api`.",
+      "where": ["app_server", "api"],
+      "retry": "after",
+      "savedOnWrite": "unknown",
+      "savedOnWriteNote": "unknown when the request may have left the device; a client that knows it never did says no.",
+      "showReference": true,
+      "toast": "visible"
+    },
+    "intercepted": {
+      "meaning": "A secure connection was blocked (TLS pinning failed behind a captive portal or an inspecting proxy). Native mobile only.",
+      "retry": "manual",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "timeout": {
+      "meaning": "The request was sent and no answer came within N seconds (the client's, a proxy's, the gateway's or the host's limit).",
+      "retry": "after",
+      "savedOnWrite": "unknown",
+      "showReference": true,
+      "toast": "visible"
+    },
+    "front_door": {
+      "meaning": "A CDN, gateway or host answered with its own error page instead of our envelope.",
+      "retry": "after",
+      "savedOnWrite": "unknown",
+      "showReference": true,
+      "toast": "visible"
+    },
+    "unavailable": {
+      "meaning": "Our server answered 503: maintenance, or a service it depends on is down. Nothing was done, and it carries Retry-After.",
+      "retry": "after",
+      "savedOnWrite": "no",
+      "showReference": true,
+      "toast": "visible"
+    },
+    "rate_limited": {
+      "meaning": "429, from our server or the gateway. Count down from the server's retry time.",
+      "retry": "after",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "busy": {
+      "meaning": "A transient lock on the same record; the server rolled back.",
+      "retry": "now",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "session_ended": {
+      "meaning": "401 after the session refresh failed.",
+      "retry": "manual",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "step_up": {
+      "meaning": "The server wants the person to confirm who they are before this action.",
+      "retry": "dialog",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "forbidden": {
+      "meaning": "A permission or role gate refused it. The server names the gate (ERROR-5).",
+      "retry": "never",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "plan": {
+      "meaning": "A plan-tier gate (402).",
+      "retry": "never",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "not_yet": {
+      "meaning": "A provisioning or setup gate: access that starts later, or a required selection (such as a building) not yet made.",
+      "retry": "never",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "validation": {
+      "meaning": "400/422 naming the fields and how to fix them.",
+      "retry": "never",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "conflict": {
+      "meaning": "409: changed elsewhere, a duplicate, or in use.",
+      "retry": "manual",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "not_found": {
+      "meaning": "404 with a coded entity: it no longer exists or was moved.",
+      "retry": "never",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "too_large": {
+      "meaning": "413: the upload or body is over the limit.",
+      "retry": "never",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "outdated_client": {
+      "meaning": "This build is older than the server: an unknown route, a missing code chunk, or a server action that no longer exists after a deploy.",
+      "retry": "reload",
+      "savedOnWrite": "no",
+      "showReference": false,
+      "toast": "visible"
+    },
+    "server_bug": {
+      "meaning": "A 500 in our envelope. A 500 means nothing was kept; a server that kept part of the work answers partial instead.",
+      "retry": "now",
+      "savedOnWrite": "no",
+      "showReference": true,
+      "toast": "visible"
+    },
+    "client_bug": {
+      "meaning": "A crash in the client: a render error, or a 2xx response it could not read.",
+      "retry": "reload",
+      "savedOnWrite": "no",
+      "showReference": true,
+      "toast": "visible"
+    },
+    "partial": {
+      "meaning": "Some items were done and some were not.",
+      "retry": "manual",
+      "savedOnWrite": "partial",
+      "showReference": true,
+      "toast": "visible"
+    },
+    "cancelled": {
+      "meaning": "Aborted by us: a context switch, an unmount, a sign-out. Shows nothing.",
+      "retry": "none",
+      "savedOnWrite": "unknown",
+      "showReference": false,
+      "toast": "silent"
+    },
+    "queued": {
+      "meaning": "Saved on the device; it will sync. A confirmation, never an error.",
+      "retry": "none",
+      "savedOnWrite": "pending",
+      "showReference": false,
+      "toast": "silent"
+    }
+  }
+}

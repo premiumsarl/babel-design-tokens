@@ -50,8 +50,41 @@ falling back to English. Implements `COPY-5`.
 Prices, deposits and totals are computed in `packages/core` and nowhere else.
 Applies `TRUTH-1` inside the monorepo.
 
+## Errors
+
+### RENDEE-ERROR-1 · Who an error may name
+
+A tenant's client (tenant site, app) never reads Rendee or SlotBase
+(`RENDEE-ID-1`). Its errors name "the booking service" or the business. The
+admin names its own layers so staff can tell them apart: "the admin panel's
+server" (the Next.js app) versus "the booking service" (the API). Admin error
+copy never names the brand either, because tenant staff use the admin (owner
+decision, 2026-10-20).
+
+### RENDEE-ERROR-2 · Rendee's error measurements
+
+- Locales: the admin's error copy is English only for now (owner decision,
+  2026-10-20), written in clear English and kept in one copy module so a
+  French layer can be added without touching call sites. Tenant sites follow
+  `RENDEE-LANG-1` (French and English for both live tenants). The app ships
+  en, fr, es and zh.
+- Support contact shown with a reference, in the admin: help@rendee.ca. Each
+  app reads it from one constant or config value, so it can be switched. No
+  reply time is promised. A tenant's client never sees it, because it names
+  Rendee (`RENDEE-ID-1`): tenant surfaces show the reference and the
+  business's own contact from its config.
+- References: the API's `requestId` (on every error body today) is shown as
+  its first 8 characters. Admin digests `api-<kind>-<ref>` show only `<ref>`.
+  A client crash, or a panel-server failure that has no digest, mints one.
+- The admin's automatic retry stops after 5 minutes (`ERROR-9`).
+- "Our team has been notified" is not written: no alert fires today
+  (`ERROR-7`).
+
+Implements `ERROR-1`, `ERROR-7` and `ERROR-9`.
+
 ## Open questions
 
 - The admin is English-only, with no translation layer, which `COPY-5` does
-  not allow. Is that deliberate for an operator surface?
+  not allow. For error copy the owner ruled English only for now
+  (2026-10-20, `RENDEE-ERROR-2`); when does the admin get French?
 - The admin sidebar still says "SlotBase" in three places.

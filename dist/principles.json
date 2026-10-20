@@ -139,6 +139,56 @@
       "scope": "common",
       "file": "principles/COMMON.md"
     },
+    "ERROR-1": {
+      "title": "Every error answers four questions",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "ERROR-2": {
+      "title": "No generic error wording, in any locale",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "ERROR-3": {
+      "title": "The client classifies the failure before choosing the words",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "ERROR-4": {
+      "title": "An unknown outcome is said as unknown",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "ERROR-5": {
+      "title": "A denial names the permission and who can grant it",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "ERROR-6": {
+      "title": "The server's error carries a code as specific as its message, and the facts the copy needs",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "ERROR-7": {
+      "title": "Every failure on our side shows a reference that support can find",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "ERROR-8": {
+      "title": "The last-resort message still owns the fault and gives a next step",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "ERROR-9": {
+      "title": "Waiting and retrying say what is not answering, and since when",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
+    "ERROR-10": {
+      "title": "A guard fails the build on new generic error wording",
+      "scope": "common",
+      "file": "principles/COMMON.md"
+    },
     "TRUTH-1": {
       "title": "Show the server's decision; never re-derive it",
       "scope": "common",
@@ -344,6 +394,16 @@
       "scope": "babel",
       "file": "principles/BABEL.md"
     },
+    "BABEL-ERROR-1": {
+      "title": "Babel's error measurements",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
+    "BABEL-ERROR-2": {
+      "title": "Money errors always state where the money is",
+      "scope": "babel",
+      "file": "principles/BABEL.md"
+    },
     "BABEL-DONE-1": {
       "title": "Smoke on dev, as the approved seats only",
       "scope": "babel",
@@ -436,6 +496,16 @@
     },
     "RENDEE-TRUTH-1": {
       "title": "Money maths lives only in the core package",
+      "scope": "rendee",
+      "file": "principles/RENDEE.md"
+    },
+    "RENDEE-ERROR-1": {
+      "title": "Who an error may name",
+      "scope": "rendee",
+      "file": "principles/RENDEE.md"
+    },
+    "RENDEE-ERROR-2": {
+      "title": "Rendee's error measurements",
       "scope": "rendee",
       "file": "principles/RENDEE.md"
     }

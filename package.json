@@ -1,7 +1,7 @@
 {
   "name": "@premiumsarl/babel-design-tokens",
-  "version": "0.8.1",
-  "description": "Single source of truth for Babel's design tokens, shared API contracts and the UX principles every Premium SARL brand follows — black core + bronze accent. Generates CSS custom properties (admin + website), JS/TS constants (admin + api), Dart constants (mobile, via the /dart pub package) and an index of the principles' rule IDs.",
+  "version": "0.9.0",
+  "description": "Single source of truth for Babel's design tokens, shared API contracts and the UX principles every Premium SARL brand follows — black core + bronze accent. Also the error-copy standard's contracts (failure kinds, error envelope, banned generic phrases). Generates CSS custom properties (admin + website), JS/TS constants (admin + api), Dart constants (mobile, via the /dart pub package) and an index of the principles' rule IDs.",
   "type": "module",
   "files": [
     "tokens.json",
@@ -9,6 +9,7 @@
     "dist/",
     "README.md",
     "DESIGN.md",
+    "ERRORS.md",
     "principles/"
   ],
   "exports": {
@@ -22,6 +23,9 @@
     },
     "./contracts.json": "./dist/contracts.flat.json",
     "./principles.json": "./dist/principles.json",
+    "./failure-kinds.json": "./contracts/failure-kinds.json",
+    "./error-envelope.json": "./contracts/error-envelope.json",
+    "./generic-error-phrases.json": "./contracts/rules/generic-error-phrases.json",
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -32,6 +36,7 @@
     "check:contracts": "node scripts/check-contracts.mjs",
     "check:ratchet": "node scripts/__tests__/ratchet-scope.test.mjs",
     "check:principles": "node scripts/__tests__/principles.test.mjs",
+    "check:error-copy": "node scripts/__tests__/error-copy.test.mjs",
     "verify": "node scripts/verify.mjs",
     "prepublishOnly": "node build.mjs && node scripts/check-contrast.mjs && node scripts/check-contracts.mjs",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"

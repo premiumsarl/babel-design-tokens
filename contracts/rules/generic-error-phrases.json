@@ -1,0 +1,406 @@
+{
+  "$meta": {
+    "name": "Generic error phrases",
+    "description": "The wording ERROR-2 bans, per locale: messages that do not say what failed, why, or what to do. Every app's error-copy guard reads this list (scripts/check-error-copy.mjs, or a vendored copy, or a Dart twin reading BabelGenericErrorPhrases). Brand-neutral.",
+    "owner": "design",
+    "matching": {
+      "normalize": "Unicode NFC; lower case; ’ ‘ ʼ ´ ` become '; “ ” « » become \"; Arabic tashkil (U+064B–U+0652) and tatweel (U+0640) removed; every run of whitespace (including no-break and narrow no-break spaces) becomes one space; leading characters that are neither letters nor digits (emoji, bullets, punctuation) removed; trimmed. Phrases below are stored already normalized.",
+      "whole": "The normalized message, with trailing punctuation and spaces removed, IS the phrase. Exempt: a status badge (ERROR-2), which an app lists in its guard's `allow` with the reason.",
+      "opening": "The normalized message starts with the phrase, and the next character is not a letter or digit (a word boundary). No boundary is needed after a Han, Hiragana, Katakana or Hangul character.",
+      "anywhere": "The phrase appears anywhere in the normalized message, at word boundaries on both sides (the same exemption for Han, Hiragana, Katakana and Hangul).",
+      "sourceLiterals": "In source code, only literals that read as prose are checked: they start with an upper-case or non-Latin letter, or contain a space. Wire values ('failed', 'error.generic.internal') and translation keys are not prose."
+    },
+    "locales": "en, fr, es and zh for Babel's admin panel and mobile app and for Rendee; pt for Babel's website; ar, de, it, ja, ko and ru for Babel's chatbot. A guard checks a catalogue against its own locale, and a source literal (whose locale is unknown) against every locale.",
+    "provenance": {
+      "measuredOn": "2026-10-20",
+      "source": "The clear-errors program inventory (ERRORS_PROGRAM_2026-10-20.md): every generic phrase found in the Babel and Rendee catalogues and sources, plus the standard translations of each."
+    }
+  },
+  "phrases": {
+    "en": {
+      "whole": [
+        "error",
+        "failed",
+        "failure",
+        "oops",
+        "please try again",
+        "still not responding",
+        "not responding"
+      ],
+      "opening": [
+        "something went wrong",
+        "something has gone wrong",
+        "something unexpected happened",
+        "an error occurred",
+        "an error has occurred",
+        "an error was encountered",
+        "an unexpected error",
+        "unexpected error",
+        "an unknown error",
+        "unknown error",
+        "an internal error",
+        "there was an error",
+        "there was a problem",
+        "a problem occurred",
+        "oops",
+        "error",
+        "failed to",
+        "failed:",
+        "request failed",
+        "internal server error",
+        "server error",
+        "network error",
+        "that didn't work",
+        "that did not work",
+        "sorry, something",
+        "sorry, an error",
+        "unable to complete your request"
+      ],
+      "anywhere": [
+        "something went wrong",
+        "an error occurred",
+        "an error has occurred",
+        "an unexpected error occurred",
+        "try again later",
+        "please try again later",
+        "try again in a moment",
+        "try again shortly",
+        "try again in a few moments",
+        "our team has been notified",
+        "we have been notified",
+        "we've been notified"
+      ]
+    },
+    "fr": {
+      "whole": [
+        "erreur",
+        "échec",
+        "échoué",
+        "oups",
+        "réessayez",
+        "veuillez réessayer",
+        "ne répond toujours pas",
+        "ne répond pas"
+      ],
+      "opening": [
+        "une erreur est survenue",
+        "une erreur s'est produite",
+        "une erreur inattendue",
+        "erreur inattendue",
+        "une erreur inconnue",
+        "erreur inconnue",
+        "une erreur interne",
+        "quelque chose s'est mal passé",
+        "un problème est survenu",
+        "un problème s'est produit",
+        "oups",
+        "erreur",
+        "échec",
+        "la requête a échoué",
+        "la demande a échoué",
+        "erreur réseau",
+        "erreur interne du serveur",
+        "erreur serveur",
+        "erreur du serveur",
+        "cela n'a pas fonctionné",
+        "ça n'a pas fonctionné",
+        "désolé, une erreur"
+      ],
+      "anywhere": [
+        "une erreur est survenue",
+        "une erreur s'est produite",
+        "quelque chose s'est mal passé",
+        "réessayez plus tard",
+        "veuillez réessayer plus tard",
+        "réessayez ultérieurement",
+        "veuillez réessayer ultérieurement",
+        "réessayez dans un instant",
+        "réessayez dans un moment",
+        "réessayez sous peu",
+        "notre équipe a été informée",
+        "notre équipe a été avertie",
+        "notre équipe a été prévenue",
+        "notre équipe a été notifiée"
+      ]
+    },
+    "es": {
+      "whole": [
+        "error",
+        "falló",
+        "fallido",
+        "ups",
+        "vuelve a intentarlo",
+        "inténtalo de nuevo",
+        "inténtelo de nuevo",
+        "no responde"
+      ],
+      "opening": [
+        "algo salió mal",
+        "algo ha salido mal",
+        "ha ocurrido un error",
+        "ocurrió un error",
+        "se produjo un error",
+        "se ha producido un error",
+        "un error inesperado",
+        "error inesperado",
+        "error desconocido",
+        "error de red",
+        "error interno del servidor",
+        "error del servidor",
+        "error",
+        "la solicitud falló",
+        "ups"
+      ],
+      "anywhere": [
+        "algo salió mal",
+        "ha ocurrido un error",
+        "ocurrió un error",
+        "se produjo un error",
+        "se ha producido un error",
+        "inténtalo más tarde",
+        "inténtelo más tarde",
+        "inténtalo de nuevo más tarde",
+        "inténtelo de nuevo más tarde",
+        "vuelve a intentarlo más tarde",
+        "vuelva a intentarlo más tarde",
+        "nuestro equipo ha sido notificado"
+      ]
+    },
+    "zh": {
+      "whole": [
+        "错误",
+        "失败",
+        "出错了",
+        "哎呀",
+        "请重试",
+        "未响应"
+      ],
+      "opening": [
+        "出现错误",
+        "发生错误",
+        "出现了错误",
+        "发生了错误",
+        "出错了",
+        "出了点问题",
+        "未知错误",
+        "意外错误",
+        "发生意外错误",
+        "网络错误",
+        "服务器错误",
+        "服务器内部错误",
+        "请求失败",
+        "操作失败",
+        "哎呀"
+      ],
+      "anywhere": [
+        "出现错误",
+        "发生错误",
+        "出了点问题",
+        "稍后重试",
+        "稍后再试",
+        "我们的团队已收到通知"
+      ]
+    },
+    "pt": {
+      "whole": [
+        "erro",
+        "falhou",
+        "falha",
+        "ops",
+        "tente novamente",
+        "não está respondendo"
+      ],
+      "opening": [
+        "algo deu errado",
+        "ocorreu um erro",
+        "um erro inesperado",
+        "erro inesperado",
+        "erro desconhecido",
+        "erro de rede",
+        "erro interno do servidor",
+        "erro do servidor",
+        "erro",
+        "falha",
+        "a solicitação falhou",
+        "ops"
+      ],
+      "anywhere": [
+        "algo deu errado",
+        "ocorreu um erro",
+        "tente novamente mais tarde",
+        "tente mais tarde",
+        "nossa equipe foi notificada"
+      ]
+    },
+    "ar": {
+      "whole": [
+        "خطأ",
+        "فشل",
+        "عفوا"
+      ],
+      "opening": [
+        "حدث خطأ",
+        "حدث خطأ ما",
+        "حدث خطأ غير متوقع",
+        "خطأ غير متوقع",
+        "خطأ غير معروف",
+        "خطأ في الشبكة",
+        "خطأ في الخادم",
+        "خطأ داخلي في الخادم",
+        "فشل الطلب",
+        "هناك خطأ ما"
+      ],
+      "anywhere": [
+        "حدث خطأ",
+        "حدث خطأ ما",
+        "يرجى المحاولة مرة أخرى لاحقا",
+        "يرجى المحاولة لاحقا",
+        "حاول مرة أخرى لاحقا",
+        "حاول لاحقا"
+      ]
+    },
+    "de": {
+      "whole": [
+        "fehler",
+        "fehlgeschlagen",
+        "hoppla",
+        "ups"
+      ],
+      "opening": [
+        "etwas ist schiefgelaufen",
+        "etwas ist schief gelaufen",
+        "ein fehler ist aufgetreten",
+        "es ist ein fehler aufgetreten",
+        "ein unerwarteter fehler",
+        "unerwarteter fehler",
+        "unbekannter fehler",
+        "netzwerkfehler",
+        "interner serverfehler",
+        "serverfehler",
+        "fehler",
+        "anfrage fehlgeschlagen",
+        "hoppla"
+      ],
+      "anywhere": [
+        "etwas ist schiefgelaufen",
+        "ein fehler ist aufgetreten",
+        "es ist ein fehler aufgetreten",
+        "versuchen sie es später erneut",
+        "versuchen sie es später noch einmal",
+        "versuche es später erneut",
+        "später erneut versuchen"
+      ]
+    },
+    "it": {
+      "whole": [
+        "errore",
+        "non riuscito",
+        "fallito",
+        "ops"
+      ],
+      "opening": [
+        "qualcosa è andato storto",
+        "si è verificato un errore",
+        "un errore imprevisto",
+        "errore imprevisto",
+        "errore sconosciuto",
+        "errore di rete",
+        "errore interno del server",
+        "errore del server",
+        "errore",
+        "richiesta non riuscita",
+        "ops"
+      ],
+      "anywhere": [
+        "qualcosa è andato storto",
+        "si è verificato un errore",
+        "riprova più tardi",
+        "riprovare più tardi",
+        "riprova tra poco"
+      ]
+    },
+    "ja": {
+      "whole": [
+        "エラー",
+        "失敗",
+        "失敗しました",
+        "おっと"
+      ],
+      "opening": [
+        "エラーが発生しました",
+        "問題が発生しました",
+        "何か問題が発生しました",
+        "予期しないエラー",
+        "不明なエラー",
+        "ネットワークエラー",
+        "サーバーエラー",
+        "内部サーバーエラー",
+        "リクエストに失敗しました"
+      ],
+      "anywhere": [
+        "エラーが発生しました",
+        "問題が発生しました",
+        "後でもう一度お試しください",
+        "しばらくしてからもう一度お試しください",
+        "後でやり直してください"
+      ]
+    },
+    "ko": {
+      "whole": [
+        "오류",
+        "실패",
+        "앗"
+      ],
+      "opening": [
+        "문제가 발생했습니다",
+        "오류가 발생했습니다",
+        "예기치 않은 오류",
+        "알 수 없는 오류",
+        "네트워크 오류",
+        "서버 오류",
+        "내부 서버 오류",
+        "요청 실패",
+        "요청에 실패했습니다",
+        "뭔가 잘못되었습니다"
+      ],
+      "anywhere": [
+        "오류가 발생했습니다",
+        "문제가 발생했습니다",
+        "나중에 다시 시도해 주세요",
+        "나중에 다시 시도하세요",
+        "잠시 후 다시 시도해 주세요"
+      ]
+    },
+    "ru": {
+      "whole": [
+        "ошибка",
+        "сбой",
+        "упс",
+        "не отвечает"
+      ],
+      "opening": [
+        "что-то пошло не так",
+        "произошла ошибка",
+        "произошла непредвиденная ошибка",
+        "непредвиденная ошибка",
+        "неизвестная ошибка",
+        "ошибка сети",
+        "сетевая ошибка",
+        "внутренняя ошибка сервера",
+        "ошибка сервера",
+        "ошибка",
+        "не удалось",
+        "запрос не выполнен",
+        "упс"
+      ],
+      "anywhere": [
+        "что-то пошло не так",
+        "произошла ошибка",
+        "попробуйте позже",
+        "повторите попытку позже",
+        "попробуйте еще раз позже",
+        "попробуйте ещё раз позже"
+      ]
+    }
+  }
+}

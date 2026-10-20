@@ -5,6 +5,50 @@ package (`lib/`) come off the same `vX.Y.Z` tag. Entries name the CSS and
 Dart surface of each change. 0.3.0–0.7.0 were backfilled in 0.8.0 from the
 commit history; this file had stopped at 0.2.0.
 
+## 0.9.0
+- **Errors that say what happened (owner ruling, 2026-10-20: "Nothing this
+  generic is acceptable").** New `## Errors` section in
+  `principles/COMMON.md`: `ERROR-1` to `ERROR-10` bind every brand (owner
+  decision, 2026-10-20). Babel's measurements are `BABEL-ERROR-1` and
+  `BABEL-ERROR-2` (money errors state where the money is); Rendee's are
+  `RENDEE-ERROR-1` (admin copy says "the admin panel's server" / "the booking
+  service", never the brand) and `RENDEE-ERROR-2` (admin error copy English
+  only for now; support contact help@rendee.ca from one constant).
+  `principles.json` and `BabelPrinciples` gain these 14 IDs. **Apps that map
+  every rule** (`principles-map.test.ts` in the admin, `principles_map_test.dart`
+  in mobile) see them as unmapped on their next pin bump: add the §0 rows in
+  the same pull request as the bump.
+- New `ERRORS.md` (ships in the npm package): failure kinds, detection per
+  platform, EN/FR wording, the Rendee screenshot case rewritten, and the guard.
+- New contracts, all additive:
+  - `contracts/failure-kinds.json` → `FAILURE_KINDS`, `FAILURE_KIND_VALUES`,
+    `type FailureKind`, `FailureKindSpec` (npm); `BabelFailureKind` (Dart:
+    one constant per kind plus `values`, `retry`, `savedOnWrite`,
+    `showReference`, `silent`, `unreachableWhere`). 23 kinds.
+  - `contracts/error-envelope.json` → `ERROR_ENVELOPE`, `GENERIC_ERROR_CODES`,
+    `type ErrorGateKind` (npm); `BabelErrorEnvelope` (Dart). 12 generic codes.
+  - `contracts/rules/generic-error-phrases.json` → `GENERIC_ERROR_PHRASES`
+    (npm); `BabelGenericErrorPhrases` (Dart). 11 locales (en, fr, es, zh, pt,
+    ar, de, it, ja, ko, ru), each with whole / opening / anywhere lists.
+  - npm exports `./failure-kinds.json`, `./error-envelope.json` and
+    `./generic-error-phrases.json` for tools that read the raw JSON.
+  - `contracts.flat.json` gains `failureKind.*`, `errorEnvelope.*` and
+    `genericErrorPhrases.*` keys.
+- **`error-codes.json` refreshed from the API** (babel-lambda-api develop
+  b950f1b6): 215 → 510 codes. 295 added; none renamed. 3 codes the API no
+  longer declares (`SUBSCRIPTION_TRIAL_ACTIVE`, `PORTAL_NOT_FOUND`,
+  `PORTAL_INVALID_CONFIG`) are kept and listed in `$meta.retiredFromApi`,
+  because a contract value is never removed in one release. 13 codes still
+  have no API translation (`$meta.untranslated`). `ERROR_CODES` /
+  `BabelErrorCodes` grow accordingly; existing members are unchanged.
+- Tooling (does not ship): `scripts/check-error-copy.mjs`, the one error-copy
+  scanner every app vendors (catalogue JSON + source literals with adjacent
+  literals joined, JSX text, title-repeats-body siblings, app counters, an
+  exact per-key baseline that `--update-baseline` only lowers).
+  `check-contracts.mjs` gains the failure-kind, envelope, phrase and
+  ERRORS.md invariants; `npm run verify` runs the scanner's self-test
+  (`npm run check:error-copy`).
+
 ## 0.8.1
 - **`PREVENT-1` revised (owner ruling, 2026-10-07): errors show when the user
   leaves a field.** The visible "Still needed" line is retired. An incomplete
