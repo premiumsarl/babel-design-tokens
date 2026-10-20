@@ -918,11 +918,11 @@ export const FAILURE_KINDS = Object.freeze({
   offline: Object.freeze({ retry: 'when_online', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
   unreachable: Object.freeze({ retry: 'after', savedOnWrite: 'unknown', showReference: true, toast: 'visible', where: Object.freeze(['app_server', 'api']) }),
   intercepted: Object.freeze({ retry: 'manual', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
-  timeout: Object.freeze({ retry: 'after', savedOnWrite: 'unknown', showReference: true, toast: 'visible' }),
-  front_door: Object.freeze({ retry: 'after', savedOnWrite: 'unknown', showReference: true, toast: 'visible' }),
+  timeout: Object.freeze({ retry: 'after', savedOnWrite: 'unknown', showReference: true, toast: 'visible', where: Object.freeze(['app_server', 'api']) }),
+  front_door: Object.freeze({ retry: 'after', savedOnWrite: 'unknown', showReference: true, toast: 'visible', where: Object.freeze(['app_server', 'api']) }),
   unavailable: Object.freeze({ retry: 'after', savedOnWrite: 'no', showReference: true, toast: 'visible' }),
   rate_limited: Object.freeze({ retry: 'after', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
-  busy: Object.freeze({ retry: 'now', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
+  busy: Object.freeze({ retry: 'now', savedOnWrite: 'unknown', showReference: false, toast: 'visible' }),
   session_ended: Object.freeze({ retry: 'manual', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
   step_up: Object.freeze({ retry: 'dialog', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
   forbidden: Object.freeze({ retry: 'never', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
@@ -933,8 +933,9 @@ export const FAILURE_KINDS = Object.freeze({
   not_found: Object.freeze({ retry: 'never', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
   too_large: Object.freeze({ retry: 'never', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
   outdated_client: Object.freeze({ retry: 'reload', savedOnWrite: 'no', showReference: false, toast: 'visible' }),
-  server_bug: Object.freeze({ retry: 'now', savedOnWrite: 'no', showReference: true, toast: 'visible' }),
+  server_bug: Object.freeze({ retry: 'now', savedOnWrite: 'unknown', showReference: true, toast: 'visible' }),
   client_bug: Object.freeze({ retry: 'reload', savedOnWrite: 'no', showReference: true, toast: 'visible' }),
+  unreadable_success: Object.freeze({ retry: 'reload', savedOnWrite: 'saved', showReference: true, toast: 'visible' }),
   partial: Object.freeze({ retry: 'manual', savedOnWrite: 'partial', showReference: true, toast: 'visible' }),
   cancelled: Object.freeze({ retry: 'none', savedOnWrite: 'unknown', showReference: false, toast: 'silent' }),
   queued: Object.freeze({ retry: 'none', savedOnWrite: 'pending', showReference: false, toast: 'silent' }),
@@ -962,6 +963,7 @@ export const FAILURE_KIND_VALUES = Object.freeze([
   'outdated_client',
   'server_bug',
   'client_bug',
+  'unreadable_success',
   'partial',
   'cancelled',
   'queued',
@@ -975,6 +977,7 @@ export const ERROR_ENVELOPE = Object.freeze({
     'message',
     'details',
     'details.gate',
+    'details.committed',
     'fieldErrors',
     'retryAfterSeconds',
     'reference',
@@ -1033,6 +1036,11 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'please try again',
       'still not responding',
       'not responding',
+      'whoops',
+      'request timed out',
+      'service unavailable',
+      'load failed',
+      'an error occured',
     ]),
     opening: Object.freeze([
       'something went wrong',
@@ -1051,7 +1059,6 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'a problem occurred',
       'oops',
       'error',
-      'failed to',
       'failed:',
       'request failed',
       'internal server error',
@@ -1062,6 +1069,8 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'sorry, something',
       'sorry, an error',
       'unable to complete your request',
+      'whoops',
+      'an error occured',
     ]),
     anywhere: Object.freeze([
       'something went wrong',
@@ -1076,6 +1085,29 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'our team has been notified',
       'we have been notified',
       'we\'ve been notified',
+      'an error occured',
+    ]),
+    causeless: Object.freeze([
+      'could not',
+      'couldn\'t',
+      'unable to',
+      'cannot',
+      'can\'t',
+      'failed to',
+    ]),
+    filler: Object.freeze([
+      'please try again',
+      'try again',
+      'please retry',
+      'retry',
+      'try again later',
+      'please try again later',
+      'sorry',
+      'please',
+    ]),
+    causeWords: Object.freeze([
+      'because',
+      'since',
     ]),
   }),
   fr: Object.freeze({
@@ -1084,7 +1116,6 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'échec',
       'échoué',
       'oups',
-      'réessayez',
       'veuillez réessayer',
       'ne répond toujours pas',
       'ne répond pas',
@@ -1102,7 +1133,6 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'un problème s\'est produit',
       'oups',
       'erreur',
-      'échec',
       'la requête a échoué',
       'la demande a échoué',
       'erreur réseau',
@@ -1129,6 +1159,27 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'notre équipe a été prévenue',
       'notre équipe a été notifiée',
     ]),
+    causeless: Object.freeze([
+      'impossible de',
+      'impossible d\'',
+      'échec',
+      'nous n\'avons pas pu',
+      'nous ne pouvons pas',
+    ]),
+    filler: Object.freeze([
+      'veuillez réessayer',
+      'réessayez',
+      'merci de réessayer',
+      'veuillez réessayer plus tard',
+      'réessayez plus tard',
+      'désolé',
+      'désolée',
+    ]),
+    causeWords: Object.freeze([
+      'car',
+      'parce que',
+      'puisque',
+    ]),
   }),
   es: Object.freeze({
     whole: Object.freeze([
@@ -1136,10 +1187,10 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'falló',
       'fallido',
       'ups',
-      'vuelve a intentarlo',
-      'inténtalo de nuevo',
-      'inténtelo de nuevo',
       'no responde',
+      'por favor, inténtalo de nuevo',
+      'por favor, inténtelo de nuevo',
+      'por favor, vuelve a intentarlo',
     ]),
     opening: Object.freeze([
       'algo salió mal',
@@ -1171,6 +1222,25 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'vuelve a intentarlo más tarde',
       'vuelva a intentarlo más tarde',
       'nuestro equipo ha sido notificado',
+    ]),
+    causeless: Object.freeze([
+      'no se pudo',
+      'no se ha podido',
+      'no fue posible',
+      'no es posible',
+    ]),
+    filler: Object.freeze([
+      'inténtalo de nuevo',
+      'inténtelo de nuevo',
+      'vuelve a intentarlo',
+      'vuelva a intentarlo',
+      'por favor',
+      'lo sentimos',
+    ]),
+    causeWords: Object.freeze([
+      'porque',
+      'ya que',
+      'debido a que',
     ]),
   }),
   zh: Object.freeze({
@@ -1207,6 +1277,20 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       '稍后再试',
       '我们的团队已收到通知',
     ]),
+    causeless: Object.freeze([
+      '无法',
+      '未能',
+    ]),
+    filler: Object.freeze([
+      '请重试',
+      '请再试一次',
+      '请稍后重试',
+      '请稍后再试',
+    ]),
+    causeWords: Object.freeze([
+      '因为',
+      '由于',
+    ]),
   }),
   pt: Object.freeze({
     whole: Object.freeze([
@@ -1214,8 +1298,8 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'falhou',
       'falha',
       'ops',
-      'tente novamente',
       'não está respondendo',
+      'por favor, tente novamente',
     ]),
     opening: Object.freeze([
       'algo deu errado',
@@ -1227,7 +1311,6 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'erro interno do servidor',
       'erro do servidor',
       'erro',
-      'falha',
       'a solicitação falhou',
       'ops',
     ]),
@@ -1237,6 +1320,21 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'tente novamente mais tarde',
       'tente mais tarde',
       'nossa equipe foi notificada',
+    ]),
+    causeless: Object.freeze([
+      'não foi possível',
+      'não é possível',
+      'falha',
+    ]),
+    filler: Object.freeze([
+      'tente novamente',
+      'tente de novo',
+      'por favor',
+      'desculpe',
+    ]),
+    causeWords: Object.freeze([
+      'porque',
+      'pois',
     ]),
   }),
   ar: Object.freeze({
@@ -1264,6 +1362,19 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'يرجى المحاولة لاحقا',
       'حاول مرة أخرى لاحقا',
       'حاول لاحقا',
+    ]),
+    causeless: Object.freeze([
+      'تعذر',
+      'لا يمكن',
+    ]),
+    filler: Object.freeze([
+      'يرجى المحاولة مرة أخرى',
+      'حاول مرة أخرى',
+      'عذرا',
+    ]),
+    causeWords: Object.freeze([
+      'لأن',
+      'بسبب',
     ]),
   }),
   de: Object.freeze({
@@ -1297,6 +1408,21 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'versuche es später erneut',
       'später erneut versuchen',
     ]),
+    causeless: Object.freeze([
+      'konnte nicht',
+      'kann nicht',
+    ]),
+    filler: Object.freeze([
+      'bitte versuchen sie es erneut',
+      'versuchen sie es erneut',
+      'bitte erneut versuchen',
+      'erneut versuchen',
+      'bitte',
+      'entschuldigung',
+    ]),
+    causeWords: Object.freeze([
+      'weil',
+    ]),
   }),
   it: Object.freeze({
     whole: Object.freeze([
@@ -1325,6 +1451,21 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'riprovare più tardi',
       'riprova tra poco',
     ]),
+    causeless: Object.freeze([
+      'impossibile',
+      'non è stato possibile',
+    ]),
+    filler: Object.freeze([
+      'riprova',
+      'riprovare',
+      'per favore riprova',
+      'per favore',
+      'ci dispiace',
+    ]),
+    causeWords: Object.freeze([
+      'perché',
+      'poiché',
+    ]),
   }),
   ja: Object.freeze({
     whole: Object.freeze([
@@ -1351,6 +1492,9 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'しばらくしてからもう一度お試しください',
       '後でやり直してください',
     ]),
+    causeless: Object.freeze([]),
+    filler: Object.freeze([]),
+    causeWords: Object.freeze([]),
   }),
   ko: Object.freeze({
     whole: Object.freeze([
@@ -1377,6 +1521,9 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       '나중에 다시 시도하세요',
       '잠시 후 다시 시도해 주세요',
     ]),
+    causeless: Object.freeze([]),
+    filler: Object.freeze([]),
+    causeWords: Object.freeze([]),
   }),
   ru: Object.freeze({
     whole: Object.freeze([
@@ -1396,7 +1543,6 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'внутренняя ошибка сервера',
       'ошибка сервера',
       'ошибка',
-      'не удалось',
       'запрос не выполнен',
       'упс',
     ]),
@@ -1407,6 +1553,21 @@ export const GENERIC_ERROR_PHRASES = Object.freeze({
       'повторите попытку позже',
       'попробуйте еще раз позже',
       'попробуйте ещё раз позже',
+    ]),
+    causeless: Object.freeze([
+      'не удалось',
+      'невозможно',
+    ]),
+    filler: Object.freeze([
+      'попробуйте еще раз',
+      'попробуйте ещё раз',
+      'повторите попытку',
+      'пожалуйста',
+      'извините',
+    ]),
+    causeWords: Object.freeze([
+      'потому что',
+      'так как',
     ]),
   }),
 });

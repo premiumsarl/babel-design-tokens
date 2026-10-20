@@ -57,7 +57,9 @@ Applies `TRUTH-1` inside the monorepo.
 A tenant's client (tenant site, app) never reads Rendee or SlotBase
 (`RENDEE-ID-1`). Its errors name "the booking service" or the business. The
 admin names its own layers so staff can tell them apart: "the admin panel's
-server" (the Next.js app) versus "the booking service" (the API). Admin error
+server" (the Next.js app) versus "the booking service" (the API), and "the
+admin panel" itself for a crash or an update of the page in the browser
+(ERRORS.md `{app}` versus `{service}`). Admin error
 copy never names the brand either, because tenant staff use the admin (owner
 decision, 2026-10-20).
 
@@ -75,7 +77,10 @@ decision, 2026-10-20).
   business's own contact from its config.
 - References: the API's `requestId` (on every error body today) is shown as
   its first 8 characters. Admin digests `api-<kind>-<ref>` show only `<ref>`.
-  A client crash, or a panel-server failure that has no digest, mints one.
+  A client crash, or a panel-server failure that has no digest, mints one,
+  and shows it only once it reaches a store support can query (`ERROR-7`).
+  While the panel's own server is down, the admin shows the time it stopped
+  answering instead.
 - The admin's automatic retry stops after 5 minutes (`ERROR-9`).
 - "Our team has been notified" is not written: no alert fires today
   (`ERROR-7`).

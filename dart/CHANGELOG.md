@@ -24,12 +24,24 @@ commit history; this file had stopped at 0.2.0.
   - `contracts/failure-kinds.json` → `FAILURE_KINDS`, `FAILURE_KIND_VALUES`,
     `type FailureKind`, `FailureKindSpec` (npm); `BabelFailureKind` (Dart:
     one constant per kind plus `values`, `retry`, `savedOnWrite`,
-    `showReference`, `silent`, `unreachableWhere`). 23 kinds.
+    `showReference`, `silent`, `unreachableWhere`, `where`). 24 kinds.
+    `savedOnWrite` is one of no / unknown / saved / partial / pending:
+    `server_bug` and `busy` are **unknown** for a write unless the envelope
+    carries `details.committed: false`, a lost connection after sending is
+    never `offline`, and a 2xx the client could not read is
+    `unreadable_success` (saved), never `client_bug`. `timeout` and
+    `front_door` carry `where` (`app_server` / `api`). The raw JSON's
+    `classify` holds the ordered code and status rules (section 4 of
+    ERRORS.md as data): no outage is inferred from an `_unavailable` suffix.
   - `contracts/error-envelope.json` → `ERROR_ENVELOPE`, `GENERIC_ERROR_CODES`,
     `type ErrorGateKind` (npm); `BabelErrorEnvelope` (Dart). 12 generic codes.
+    `details.committed: false` is how a server proves a rollback.
   - `contracts/rules/generic-error-phrases.json` → `GENERIC_ERROR_PHRASES`
     (npm); `BabelGenericErrorPhrases` (Dart). 11 locales (en, fr, es, zh, pt,
-    ar, de, it, ja, ko, ru), each with whole / opening / anywhere lists.
+    ar, de, it, ja, ko, ru), each with whole / opening / anywhere lists, and
+    causeless / filler / causeWords for openings such as "Could not …" that
+    are generic only when no cause follows ("Unable to load transactions.
+    Please try again."). A plain "Try again" is a label in every locale.
   - npm exports `./failure-kinds.json`, `./error-envelope.json` and
     `./generic-error-phrases.json` for tools that read the raw JSON.
   - `contracts.flat.json` gains `failureKind.*`, `errorEnvelope.*` and
@@ -43,8 +55,12 @@ commit history; this file had stopped at 0.2.0.
   `BabelErrorCodes` grow accordingly; existing members are unchanged.
 - Tooling (does not ship): `scripts/check-error-copy.mjs`, the one error-copy
   scanner every app vendors (catalogue JSON + source literals with adjacent
-  literals joined, JSX text, title-repeats-body siblings, app counters, an
-  exact per-key baseline that `--update-baseline` only lowers).
+  literals joined, tagged templates, JSX text joined per element around
+  `{expressions}` and inline tags, catalogues checked against their locale
+  and English, title-repeats-body siblings, app counters matched with string
+  literals kept, an exact per-key baseline that `--update-baseline` only
+  lowers, and `--base <git-ref>` so CI fails a raised or hand-added baseline
+  entry and an unapproved new `allow`).
   `check-contracts.mjs` gains the failure-kind, envelope, phrase and
   ERRORS.md invariants; `npm run verify` runs the scanner's self-test
   (`npm run check:error-copy`).

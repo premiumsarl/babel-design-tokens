@@ -28,7 +28,13 @@
  *        · identifiers survive the Dart transform uniquely
  *        · failure kinds: every kind declares retry / savedOnWrite /
  *          showReference / toast from the declared vocabulary, and ERRORS.md
- *          documents exactly these kinds
+ *          documents exactly these kinds, with the same retry, saved state
+ *          and reference (the first word of each cell)
+ *        · the classify table: every rule names a real kind, ERRORS.md
+ *          section 4 lists the same rules and statuses, and every
+ *          error-codes.json value runs through it: no outage inferred from
+ *          an _unavailable suffix, every *.not_found / *_not_found code
+ *          reaches not_found
  *        · the error envelope: genericCodes ⊂ error-codes.json, every field
  *          typed and documented, status/errorCode/message required
  *        · the generic error phrases: every required locale present, no
@@ -301,19 +307,110 @@ console.log('\nFAILURE KINDS');
   const camels = kinds.map(([kind]) => kind.replace(/_(.)/g, (_, x) => x.toUpperCase()));
   const dupCamel = dupsOf(camels);
   if (dupCamel.length) fail(where, `Dart identifier collision: ${dupCamel.join(', ')}`);
-  const reserved = ['values', 'retry', 'savedOnWrite', 'showReference', 'silent', 'unreachableWhere'];
+  const reserved = ['values', 'retry', 'savedOnWrite', 'showReference', 'silent', 'unreachableWhere', 'where'];
   const clash = camels.filter((n) => reserved.includes(n));
   if (clash.length) fail(where, `kind name(s) collide with a BabelFailureKind member: ${clash.join(', ')}`);
 
-  // ERRORS.md documents the kinds in one table; it must list exactly these.
+  // ERRORS.md documents the kinds in one table; it must list exactly these,
+  // and agree on the attributes the copy depends on. Each cell's first word
+  // is the value: `after (automatic)` → after, `**unknown** (…)` → unknown,
+  // `yes (minted)` → true.
   const doc = readRaw(join(ROOT, 'ERRORS.md'));
-  const table = [...doc.matchAll(/^\| `([a-z_]+)` \|/gm)].map((m) => m[1]);
+  const firstWord = (cell) => cell.replace(/\*\*/g, '').trim().split(/[\s(]/)[0];
+  const rows = [...doc.matchAll(/^\| `([a-z_]+)` \|(.*)\|\s*$/gm)].map((m) => [m[1], m[2].split(' | ').map((c) => c.trim())]);
+  const table = rows.map(([kind]) => kind);
   const names = kinds.map(([kind]) => kind);
   const missingDoc = names.filter((n) => !table.includes(n));
   const extraDoc = table.filter((n) => !names.includes(n));
   if (missingDoc.length) fail('ERRORS.md', `the failure-kind table lacks: ${missingDoc.join(', ')}`);
   if (extraDoc.length) fail('ERRORS.md', `the failure-kind table lists kinds the contract does not: ${extraDoc.join(', ')}`);
-  ok(`${where} — ${kinds.length} kinds, each with retry/savedOnWrite/showReference/toast; ERRORS.md lists the same ${table.length}`);
+  for (const [kind, cells] of rows) {
+    const k = c.kinds[kind];
+    if (!k) continue;
+    if (cells.length !== 4) { fail('ERRORS.md', `failure-kind row "${kind}" has ${cells.length + 1} cells, not 5 (Kind, Meaning, Retry, Saved, Ref)`); continue; }
+    const [, retry, saved, ref] = cells.map(firstWord);
+    if (retry !== k.retry) fail('ERRORS.md', `"${kind}": Retry says ${retry}, the contract says ${k.retry}`);
+    if (saved !== k.savedOnWrite) fail('ERRORS.md', `"${kind}": Saved says ${saved}, the contract says ${k.savedOnWrite}`);
+    if (!['yes', 'no'].includes(ref)) fail('ERRORS.md', `"${kind}": Ref must start with yes or no, got ${ref}`);
+    else if ((ref === 'yes') !== k.showReference) fail('ERRORS.md', `"${kind}": Ref says ${ref}, the contract says showReference ${k.showReference}`);
+  }
+  ok(`${where} — ${kinds.length} kinds, each with retry/savedOnWrite/showReference/toast; ERRORS.md lists the same ${table.length}, with the same retry, saved state and reference`);
+
+  /* the classify table: section 4, step 4, as data */
+  const cls = c.classify ?? {};
+  const codeRules = cls.codes ?? [];
+  if (codeRules.length === 0) fail(where, 'classify.codes is empty');
+  const globRe = (p) => new RegExp(`^${p.split('*').map((x) => x.replace(/[.]/g, '\\.')).join('[a-z0-9_.]*')}$`);
+  for (const [i, r] of codeRules.entries()) {
+    if (!(r.kind in c.kinds)) fail(where, `classify.codes[${i}]: kind "${r.kind}" is not a kind`);
+    if (!Array.isArray(r.match) || r.match.length === 0) fail(where, `classify.codes[${i}]: match must be a non-empty list`);
+    for (const p of r.match ?? []) {
+      if (!/^[a-z0-9_.*]+$/.test(p)) fail(where, `classify.codes[${i}]: pattern "${p}" may hold only a-z 0-9 _ . *`);
+      // An outage is never inferred from a suffix: `*_unavailable` would turn
+      // a 409 "passkeys are not available on this site" into "the service is down".
+      if (r.kind === 'unavailable' && /^\*[._]?unavailable$/.test(p)) fail(where, `classify.codes[${i}]: "${p}" infers an outage from a suffix; name the outage codes`);
+    }
+    if (r.where && !(c.kinds[r.kind]?.where ?? []).includes(r.where)) fail(where, `classify.codes[${i}]: where "${r.where}" is not one of ${r.kind}'s`);
+  }
+  for (const [st, kind] of Object.entries(cls.status ?? {})) {
+    if (!/^(?:[1-5]\d\d|[45]xx)$/.test(st)) fail(where, `classify.status: "${st}" is neither a status nor 4xx/5xx`);
+    if (!(kind in c.kinds)) fail(where, `classify.status.${st}: "${kind}" is not a kind`);
+  }
+  if (!cls.status?.['4xx'] || !cls.status?.['5xx']) fail(where, 'classify.status must end with 4xx and 5xx, so no status is left unclassified');
+  const classifyCode = (code) => {
+    for (const r of codeRules) if ((r.match ?? []).some((p) => globRe(p).test(code))) return r.kind;
+    return null;
+  };
+
+  // Every code the API declares, through the rules.
+  const allCodes = readJson(join(CONTRACTS, 'error-codes.json')).codes;
+  let matched = 0;
+  for (const [name, value] of Object.entries(allCodes)) {
+    const kind = classifyCode(value);
+    if (kind) matched += 1;
+    const last = value.split('.').at(-1);
+    if ((last === 'not_found' || last.endsWith('_not_found')) && !value.startsWith('error.session.') && !value.startsWith('error.subscription.') && !last.endsWith('route_not_found') && kind !== 'not_found') {
+      fail(where, `${name} (${value}) is a not-found code but classifies as ${kind ?? 'nothing (status fallback)'}`);
+    }
+    if (kind === 'unavailable' && /_unavailable$/.test(last) && !codeRules.some((r) => r.kind === 'unavailable' && r.match.includes(value)) && !/\.ai_unavailable$/.test(value)) {
+      fail(where, `${name} (${value}) classifies as an outage only by its suffix`);
+    }
+  }
+  // The refusals that once read as outages (program finding, 2026-10-20).
+  for (const name of ['PASSKEY_UNAVAILABLE', 'SCHEDULE_BANK_AUTOPAY_UNAVAILABLE', 'SCHEDULE_COLLECT_NOW_UNAVAILABLE', 'INFORMATION_SHARE_UNAVAILABLE']) {
+    if (name in allCodes && classifyCode(allCodes[name]) === 'unavailable') fail(where, `${name} is a 4xx refusal, not an outage`);
+  }
+  for (const [name, kind] of [['SERVICE_UNAVAILABLE', 'unavailable'], ['INTERNAL_ERROR', 'server_bug'], ['UNIT_NOT_FOUND', 'not_found'], ['ASSOCIATION_NOT_FOUND', 'not_found'], ['SESSION_EXPIRED', 'session_ended'], ['DATABASE_BUSY', 'busy']]) {
+    if (classifyCode(allCodes[name]) !== kind) fail(where, `${name} (${allCodes[name]}) should classify as ${kind}, got ${classifyCode(allCodes[name])}`);
+  }
+
+  // ERRORS.md section 4, step 4 lists the same rules and statuses.
+  const step4 = doc.split('4. **Our envelope.**')[1]?.split('\n5. ')[0] ?? '';
+  if (!step4) fail('ERRORS.md', 'section 4 has no "4. **Our envelope.**" step');
+  const docPairs = new Set();
+  for (const line of step4.split('\n')) {
+    const m = line.match(/^\s+- (.+?) → (.+)$/);
+    if (!m) continue;
+    // The kind is the first backticked kind name after the arrow
+    // ("→ a silent refetch, then `session_ended`").
+    const kind = [...m[2].matchAll(/`([a-z_]+)`/g)].map((x) => x[1]).find((x) => x in c.kinds);
+    if (!kind) { fail('ERRORS.md', `section 4, step 4: no kind after the arrow in "${line.trim()}"`); continue; }
+    for (const [, p] of m[1].matchAll(/`([a-z0-9_.*]+)`/g)) if (/[.*]/.test(p)) docPairs.add(`${p} → ${kind}`);
+  }
+  const jsonPairs = new Set(codeRules.flatMap((r) => (r.match ?? []).map((p) => `${p} → ${r.kind}`)));
+  const onlyDoc = [...docPairs].filter((x) => !jsonPairs.has(x));
+  const onlyJson = [...jsonPairs].filter((x) => !docPairs.has(x));
+  if (onlyDoc.length) fail('ERRORS.md', `section 4 maps codes classify does not: ${onlyDoc.join('; ')}`);
+  if (onlyJson.length) fail('ERRORS.md', `section 4 lacks classify rules: ${onlyJson.join('; ')}`);
+  const docStatus = {};
+  for (const m of step4.replace(/\s+/g, ' ').matchAll(/((?:\d{3}\/)*\d{3}|any other [45]xx) → `([a-z_]+)`/g)) {
+    const keys = m[1].startsWith('any other') ? [m[1].slice(-3)] : m[1].split('/');
+    for (const k of keys) docStatus[k] = m[2];
+  }
+  const statusDiff = [...new Set([...Object.keys(docStatus), ...Object.keys(cls.status ?? {})])]
+    .filter((k) => docStatus[k] !== cls.status?.[k]).map((k) => `${k}: doc ${docStatus[k] ?? '—'}, contract ${cls.status?.[k] ?? '—'}`);
+  if (statusDiff.length) fail('ERRORS.md', `section 4's status fallback differs from classify.status: ${statusDiff.join('; ')}`);
+  ok(`classify — ${codeRules.length} code rules (ERRORS.md lists the same), ${Object.keys(cls.status ?? {}).length} statuses; ${matched} of ${Object.keys(allCodes).length} error codes match a rule, the rest fall back to their status`);
 }
 
 /* ── 6. error envelope ──────────────────────────────────────────────────── */
@@ -364,20 +461,26 @@ console.log('\nGENERIC ERROR PHRASES');
     const missing = REQUIRED.filter((l) => !(l in c.phrases));
     if (missing.length) fail(where, `missing locale(s): ${missing.join(', ')}`);
     let n = 0;
+    // causeless needs filler + causeWords; the space-less scripts (ja, ko)
+    // may leave all three empty, the languages of the admin and app may not.
+    const CAUSELESS_REQUIRED = ['en', 'fr', 'es', 'zh'];
     for (const [locale, lists] of Object.entries(c.phrases)) {
-      for (const mode of ['whole', 'opening', 'anywhere']) {
+      for (const mode of ['whole', 'opening', 'anywhere', 'causeless', 'filler', 'causeWords']) {
         const list = lists[mode];
         if (!Array.isArray(list)) { fail(where, `${locale}.${mode} must be a list`); continue; }
-        if (mode !== 'whole' && list.length === 0) fail(where, `${locale}.${mode} is empty: that locale's guard would catch nothing`);
+        if (['opening', 'anywhere'].includes(mode) && list.length === 0) fail(where, `${locale}.${mode} is empty: that locale's guard would catch nothing`);
+        if (['causeless', 'filler'].includes(mode) && list.length === 0 && CAUSELESS_REQUIRED.includes(locale)) fail(where, `${locale}.${mode} is empty: "could not …, please try again" would pass in ${locale}`);
         const dupP = dupsOf(list);
         if (dupP.length) fail(where, `${locale}.${mode} repeats: ${dupP.join(', ')}`);
         for (const phrase of list) {
           n += 1;
           if (normalize(phrase) !== phrase) fail(where, `${locale}.${mode} "${phrase}" is not normalized (expected "${normalize(phrase)}"); it would never match`);
-          // Each phrase, said as a whole message, must be caught in its own locale.
-          else if (!matchGeneric(c.phrases, phrase, [locale])) fail(where, `${locale}.${mode} "${phrase}" is not caught by check-error-copy.mjs as a message`);
+          // Each banned phrase, said as a whole message, must be caught in its
+          // own locale. filler and causeWords are not banned on their own.
+          else if (!['filler', 'causeWords'].includes(mode) && !matchGeneric(c.phrases, phrase, [locale])) fail(where, `${locale}.${mode} "${phrase}" is not caught by check-error-copy.mjs as a message`);
         }
       }
+      if ((lists.causeless ?? []).length && !(lists.filler ?? []).length) fail(where, `${locale}: causeless without filler`);
     }
     ok(`${where} — ${Object.keys(c.phrases).length} locales, ${n} phrases, normalized and each caught by the scanner`);
   }

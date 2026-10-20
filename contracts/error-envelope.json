@@ -14,7 +14,7 @@
     "status": {
       "type": "boolean",
       "required": true,
-      "doc": "Always false on an error. A body without a boolean status is not our envelope (a gateway or CDN page): the client classifies it as front_door, timeout, rate_limited, too_large or outdated_client from the HTTP status (ERRORS.md section 3)."
+      "doc": "Always false on an error. A body without a boolean status is not our envelope (a gateway or CDN page): the client classifies it as front_door, timeout, rate_limited, too_large or outdated_client from the HTTP status (ERRORS.md section 4, step 3)."
     },
     "errorCode": {
       "type": "string",
@@ -35,6 +35,11 @@
       "type": "object",
       "required": false,
       "doc": "On a 403 (and a 402): which gate refused, so the client names it (ERROR-5) and never guesses (TRUTH-1). See `gate`."
+    },
+    "details.committed": {
+      "type": "boolean",
+      "required": false,
+      "doc": "On a 5xx (and DATABASE_BUSY) for a write: false only when the server proves nothing was kept (the whole path ran in one transaction and it rolled back), so the client may say \"nothing was saved\". Absent means the server cannot tell (a connection lost after COMMIT, a step saved before the failure): the client says the outcome is unknown (ERROR-4). A server that knows it kept part answers partial instead."
     },
     "fieldErrors": {
       "type": "array",

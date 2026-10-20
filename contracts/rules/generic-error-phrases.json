@@ -5,12 +5,15 @@
     "owner": "design",
     "matching": {
       "normalize": "Unicode NFC; lower case; ’ ‘ ʼ ´ ` become '; “ ” « » become \"; Arabic tashkil (U+064B–U+0652) and tatweel (U+0640) removed; every run of whitespace (including no-break and narrow no-break spaces) becomes one space; leading characters that are neither letters nor digits (emoji, bullets, punctuation) removed; trimmed. Phrases below are stored already normalized.",
-      "whole": "The normalized message, with trailing punctuation and spaces removed, IS the phrase. Exempt: a status badge (ERROR-2), which an app lists in its guard's `allow` with the reason.",
-      "opening": "The normalized message starts with the phrase, and the next character is not a letter or digit (a word boundary). No boundary is needed after a Han, Hiragana, Katakana or Hangul character.",
+      "whole": "The normalized message, with trailing punctuation and spaces removed, IS the phrase. Exempt: a status badge (ERROR-2), which an app lists in its guard's `allow` with the reason. A plain imperative such as \"try again\" / « réessayez » is a button label and is not listed in any locale; its polite message form (\"please try again\", « veuillez réessayer ») is.",
+      "opening": "The normalized message starts with the phrase, and the next character is not a letter or digit (a word boundary). No boundary is needed after a Han, Hiragana, Katakana or Hangul character, or after a phrase that ends in punctuation (« impossible d' »).",
       "anywhere": "The phrase appears anywhere in the normalized message, at word boundaries on both sides (the same exemption for Han, Hiragana, Katakana and Hangul).",
-      "sourceLiterals": "In source code, only literals that read as prose are checked: they start with an upper-case or non-Latin letter, or contain a space. Wire values ('failed', 'error.generic.internal') and translation keys are not prose."
+      "sourceLiterals": "In source code, only literals that read as prose are checked: they start with an upper-case or non-Latin letter, or contain a space. Wire values ('failed', 'error.generic.internal') and translation keys are not prose.",
+      "causeless": "An opening that can carry a cause (\"could not …\", « impossible de … », « échec … », « не удалось … »). It matches only when no cause follows: the message opens with the phrase (as for `opening`), its first clause holds none of the locale's `causeWords`, and every later clause is one of the locale's `filler` sentences or empty. Clauses are split at . ! ? : ; , ( and a spaced dash, and at their CJK and Arabic forms. \"Could not load the tasks. Please try again.\" matches; \"Could not save: the server did not answer within 30 s.\" does not.",
+      "filler": "Per locale: clauses that add no cause and no specific next step (\"please try again\", \"sorry\"). Used only by `causeless`; never banned on their own.",
+      "causeWords": "Per locale: words that introduce a cause inside the first clause (\"because\", « parce que »). Used only by `causeless`."
     },
-    "locales": "en, fr, es and zh for Babel's admin panel and mobile app and for Rendee; pt for Babel's website; ar, de, it, ja, ko and ru for Babel's chatbot. A guard checks a catalogue against its own locale, and a source literal (whose locale is unknown) against every locale.",
+    "locales": "en, fr, es and zh for Babel's admin panel and mobile app and for Rendee; pt for Babel's website; ar, de, it, ja, ko and ru for Babel's chatbot. A guard checks a catalogue against its own locale and against en (the source language an untranslated value is left in), and a source literal (whose locale is unknown) against every locale. Every locale lists whole, opening and anywhere; causeless, filler and causeWords may be empty where the language does not open a sentence that way (ja, ko).",
     "provenance": {
       "measuredOn": "2026-10-20",
       "source": "The clear-errors program inventory (ERRORS_PROGRAM_2026-10-20.md): every generic phrase found in the Babel and Rendee catalogues and sources, plus the standard translations of each."
@@ -25,7 +28,12 @@
         "oops",
         "please try again",
         "still not responding",
-        "not responding"
+        "not responding",
+        "whoops",
+        "request timed out",
+        "service unavailable",
+        "load failed",
+        "an error occured"
       ],
       "opening": [
         "something went wrong",
@@ -44,7 +52,6 @@
         "a problem occurred",
         "oops",
         "error",
-        "failed to",
         "failed:",
         "request failed",
         "internal server error",
@@ -54,7 +61,9 @@
         "that did not work",
         "sorry, something",
         "sorry, an error",
-        "unable to complete your request"
+        "unable to complete your request",
+        "whoops",
+        "an error occured"
       ],
       "anywhere": [
         "something went wrong",
@@ -68,7 +77,30 @@
         "try again in a few moments",
         "our team has been notified",
         "we have been notified",
-        "we've been notified"
+        "we've been notified",
+        "an error occured"
+      ],
+      "causeless": [
+        "could not",
+        "couldn't",
+        "unable to",
+        "cannot",
+        "can't",
+        "failed to"
+      ],
+      "filler": [
+        "please try again",
+        "try again",
+        "please retry",
+        "retry",
+        "try again later",
+        "please try again later",
+        "sorry",
+        "please"
+      ],
+      "causeWords": [
+        "because",
+        "since"
       ]
     },
     "fr": {
@@ -77,7 +109,6 @@
         "échec",
         "échoué",
         "oups",
-        "réessayez",
         "veuillez réessayer",
         "ne répond toujours pas",
         "ne répond pas"
@@ -95,7 +126,6 @@
         "un problème s'est produit",
         "oups",
         "erreur",
-        "échec",
         "la requête a échoué",
         "la demande a échoué",
         "erreur réseau",
@@ -121,6 +151,27 @@
         "notre équipe a été avertie",
         "notre équipe a été prévenue",
         "notre équipe a été notifiée"
+      ],
+      "causeless": [
+        "impossible de",
+        "impossible d'",
+        "échec",
+        "nous n'avons pas pu",
+        "nous ne pouvons pas"
+      ],
+      "filler": [
+        "veuillez réessayer",
+        "réessayez",
+        "merci de réessayer",
+        "veuillez réessayer plus tard",
+        "réessayez plus tard",
+        "désolé",
+        "désolée"
+      ],
+      "causeWords": [
+        "car",
+        "parce que",
+        "puisque"
       ]
     },
     "es": {
@@ -129,10 +180,10 @@
         "falló",
         "fallido",
         "ups",
-        "vuelve a intentarlo",
-        "inténtalo de nuevo",
-        "inténtelo de nuevo",
-        "no responde"
+        "no responde",
+        "por favor, inténtalo de nuevo",
+        "por favor, inténtelo de nuevo",
+        "por favor, vuelve a intentarlo"
       ],
       "opening": [
         "algo salió mal",
@@ -164,6 +215,25 @@
         "vuelve a intentarlo más tarde",
         "vuelva a intentarlo más tarde",
         "nuestro equipo ha sido notificado"
+      ],
+      "causeless": [
+        "no se pudo",
+        "no se ha podido",
+        "no fue posible",
+        "no es posible"
+      ],
+      "filler": [
+        "inténtalo de nuevo",
+        "inténtelo de nuevo",
+        "vuelve a intentarlo",
+        "vuelva a intentarlo",
+        "por favor",
+        "lo sentimos"
+      ],
+      "causeWords": [
+        "porque",
+        "ya que",
+        "debido a que"
       ]
     },
     "zh": {
@@ -199,6 +269,20 @@
         "稍后重试",
         "稍后再试",
         "我们的团队已收到通知"
+      ],
+      "causeless": [
+        "无法",
+        "未能"
+      ],
+      "filler": [
+        "请重试",
+        "请再试一次",
+        "请稍后重试",
+        "请稍后再试"
+      ],
+      "causeWords": [
+        "因为",
+        "由于"
       ]
     },
     "pt": {
@@ -207,8 +291,8 @@
         "falhou",
         "falha",
         "ops",
-        "tente novamente",
-        "não está respondendo"
+        "não está respondendo",
+        "por favor, tente novamente"
       ],
       "opening": [
         "algo deu errado",
@@ -220,7 +304,6 @@
         "erro interno do servidor",
         "erro do servidor",
         "erro",
-        "falha",
         "a solicitação falhou",
         "ops"
       ],
@@ -230,6 +313,21 @@
         "tente novamente mais tarde",
         "tente mais tarde",
         "nossa equipe foi notificada"
+      ],
+      "causeless": [
+        "não foi possível",
+        "não é possível",
+        "falha"
+      ],
+      "filler": [
+        "tente novamente",
+        "tente de novo",
+        "por favor",
+        "desculpe"
+      ],
+      "causeWords": [
+        "porque",
+        "pois"
       ]
     },
     "ar": {
@@ -257,6 +355,19 @@
         "يرجى المحاولة لاحقا",
         "حاول مرة أخرى لاحقا",
         "حاول لاحقا"
+      ],
+      "causeless": [
+        "تعذر",
+        "لا يمكن"
+      ],
+      "filler": [
+        "يرجى المحاولة مرة أخرى",
+        "حاول مرة أخرى",
+        "عذرا"
+      ],
+      "causeWords": [
+        "لأن",
+        "بسبب"
       ]
     },
     "de": {
@@ -289,6 +400,21 @@
         "versuchen sie es später noch einmal",
         "versuche es später erneut",
         "später erneut versuchen"
+      ],
+      "causeless": [
+        "konnte nicht",
+        "kann nicht"
+      ],
+      "filler": [
+        "bitte versuchen sie es erneut",
+        "versuchen sie es erneut",
+        "bitte erneut versuchen",
+        "erneut versuchen",
+        "bitte",
+        "entschuldigung"
+      ],
+      "causeWords": [
+        "weil"
       ]
     },
     "it": {
@@ -317,6 +443,21 @@
         "riprova più tardi",
         "riprovare più tardi",
         "riprova tra poco"
+      ],
+      "causeless": [
+        "impossibile",
+        "non è stato possibile"
+      ],
+      "filler": [
+        "riprova",
+        "riprovare",
+        "per favore riprova",
+        "per favore",
+        "ci dispiace"
+      ],
+      "causeWords": [
+        "perché",
+        "poiché"
       ]
     },
     "ja": {
@@ -343,7 +484,10 @@
         "後でもう一度お試しください",
         "しばらくしてからもう一度お試しください",
         "後でやり直してください"
-      ]
+      ],
+      "causeless": [],
+      "filler": [],
+      "causeWords": []
     },
     "ko": {
       "whole": [
@@ -369,7 +513,10 @@
         "나중에 다시 시도해 주세요",
         "나중에 다시 시도하세요",
         "잠시 후 다시 시도해 주세요"
-      ]
+      ],
+      "causeless": [],
+      "filler": [],
+      "causeWords": []
     },
     "ru": {
       "whole": [
@@ -389,7 +536,6 @@
         "внутренняя ошибка сервера",
         "ошибка сервера",
         "ошибка",
-        "не удалось",
         "запрос не выполнен",
         "упс"
       ],
@@ -400,6 +546,21 @@
         "повторите попытку позже",
         "попробуйте еще раз позже",
         "попробуйте ещё раз позже"
+      ],
+      "causeless": [
+        "не удалось",
+        "невозможно"
+      ],
+      "filler": [
+        "попробуйте еще раз",
+        "попробуйте ещё раз",
+        "повторите попытку",
+        "пожалуйста",
+        "извините"
+      ],
+      "causeWords": [
+        "потому что",
+        "так как"
       ]
     }
   }

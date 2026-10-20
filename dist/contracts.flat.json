@@ -862,10 +862,18 @@
   "failureKind.timeout.savedOnWrite": "unknown",
   "failureKind.timeout.showReference": true,
   "failureKind.timeout.toast": "visible",
+  "failureKind.timeout.where": [
+    "app_server",
+    "api"
+  ],
   "failureKind.front_door.retry": "after",
   "failureKind.front_door.savedOnWrite": "unknown",
   "failureKind.front_door.showReference": true,
   "failureKind.front_door.toast": "visible",
+  "failureKind.front_door.where": [
+    "app_server",
+    "api"
+  ],
   "failureKind.unavailable.retry": "after",
   "failureKind.unavailable.savedOnWrite": "no",
   "failureKind.unavailable.showReference": true,
@@ -875,7 +883,7 @@
   "failureKind.rate_limited.showReference": false,
   "failureKind.rate_limited.toast": "visible",
   "failureKind.busy.retry": "now",
-  "failureKind.busy.savedOnWrite": "no",
+  "failureKind.busy.savedOnWrite": "unknown",
   "failureKind.busy.showReference": false,
   "failureKind.busy.toast": "visible",
   "failureKind.session_ended.retry": "manual",
@@ -919,13 +927,17 @@
   "failureKind.outdated_client.showReference": false,
   "failureKind.outdated_client.toast": "visible",
   "failureKind.server_bug.retry": "now",
-  "failureKind.server_bug.savedOnWrite": "no",
+  "failureKind.server_bug.savedOnWrite": "unknown",
   "failureKind.server_bug.showReference": true,
   "failureKind.server_bug.toast": "visible",
   "failureKind.client_bug.retry": "reload",
   "failureKind.client_bug.savedOnWrite": "no",
   "failureKind.client_bug.showReference": true,
   "failureKind.client_bug.toast": "visible",
+  "failureKind.unreadable_success.retry": "reload",
+  "failureKind.unreadable_success.savedOnWrite": "saved",
+  "failureKind.unreadable_success.showReference": true,
+  "failureKind.unreadable_success.toast": "visible",
   "failureKind.partial.retry": "manual",
   "failureKind.partial.savedOnWrite": "partial",
   "failureKind.partial.showReference": true,
@@ -944,6 +956,7 @@
     "message",
     "details",
     "details.gate",
+    "details.committed",
     "fieldErrors",
     "retryAfterSeconds",
     "reference"
@@ -988,7 +1001,12 @@
     "oops",
     "please try again",
     "still not responding",
-    "not responding"
+    "not responding",
+    "whoops",
+    "request timed out",
+    "service unavailable",
+    "load failed",
+    "an error occured"
   ],
   "genericErrorPhrases.en.opening": [
     "something went wrong",
@@ -1007,7 +1025,6 @@
     "a problem occurred",
     "oops",
     "error",
-    "failed to",
     "failed:",
     "request failed",
     "internal server error",
@@ -1017,7 +1034,9 @@
     "that did not work",
     "sorry, something",
     "sorry, an error",
-    "unable to complete your request"
+    "unable to complete your request",
+    "whoops",
+    "an error occured"
   ],
   "genericErrorPhrases.en.anywhere": [
     "something went wrong",
@@ -1031,14 +1050,36 @@
     "try again in a few moments",
     "our team has been notified",
     "we have been notified",
-    "we've been notified"
+    "we've been notified",
+    "an error occured"
+  ],
+  "genericErrorPhrases.en.causeless": [
+    "could not",
+    "couldn't",
+    "unable to",
+    "cannot",
+    "can't",
+    "failed to"
+  ],
+  "genericErrorPhrases.en.filler": [
+    "please try again",
+    "try again",
+    "please retry",
+    "retry",
+    "try again later",
+    "please try again later",
+    "sorry",
+    "please"
+  ],
+  "genericErrorPhrases.en.causeWords": [
+    "because",
+    "since"
   ],
   "genericErrorPhrases.fr.whole": [
     "erreur",
     "échec",
     "échoué",
     "oups",
-    "réessayez",
     "veuillez réessayer",
     "ne répond toujours pas",
     "ne répond pas"
@@ -1056,7 +1097,6 @@
     "un problème s'est produit",
     "oups",
     "erreur",
-    "échec",
     "la requête a échoué",
     "la demande a échoué",
     "erreur réseau",
@@ -1083,15 +1123,36 @@
     "notre équipe a été prévenue",
     "notre équipe a été notifiée"
   ],
+  "genericErrorPhrases.fr.causeless": [
+    "impossible de",
+    "impossible d'",
+    "échec",
+    "nous n'avons pas pu",
+    "nous ne pouvons pas"
+  ],
+  "genericErrorPhrases.fr.filler": [
+    "veuillez réessayer",
+    "réessayez",
+    "merci de réessayer",
+    "veuillez réessayer plus tard",
+    "réessayez plus tard",
+    "désolé",
+    "désolée"
+  ],
+  "genericErrorPhrases.fr.causeWords": [
+    "car",
+    "parce que",
+    "puisque"
+  ],
   "genericErrorPhrases.es.whole": [
     "error",
     "falló",
     "fallido",
     "ups",
-    "vuelve a intentarlo",
-    "inténtalo de nuevo",
-    "inténtelo de nuevo",
-    "no responde"
+    "no responde",
+    "por favor, inténtalo de nuevo",
+    "por favor, inténtelo de nuevo",
+    "por favor, vuelve a intentarlo"
   ],
   "genericErrorPhrases.es.opening": [
     "algo salió mal",
@@ -1123,6 +1184,25 @@
     "vuelve a intentarlo más tarde",
     "vuelva a intentarlo más tarde",
     "nuestro equipo ha sido notificado"
+  ],
+  "genericErrorPhrases.es.causeless": [
+    "no se pudo",
+    "no se ha podido",
+    "no fue posible",
+    "no es posible"
+  ],
+  "genericErrorPhrases.es.filler": [
+    "inténtalo de nuevo",
+    "inténtelo de nuevo",
+    "vuelve a intentarlo",
+    "vuelva a intentarlo",
+    "por favor",
+    "lo sentimos"
+  ],
+  "genericErrorPhrases.es.causeWords": [
+    "porque",
+    "ya que",
+    "debido a que"
   ],
   "genericErrorPhrases.zh.whole": [
     "错误",
@@ -1157,13 +1237,27 @@
     "稍后再试",
     "我们的团队已收到通知"
   ],
+  "genericErrorPhrases.zh.causeless": [
+    "无法",
+    "未能"
+  ],
+  "genericErrorPhrases.zh.filler": [
+    "请重试",
+    "请再试一次",
+    "请稍后重试",
+    "请稍后再试"
+  ],
+  "genericErrorPhrases.zh.causeWords": [
+    "因为",
+    "由于"
+  ],
   "genericErrorPhrases.pt.whole": [
     "erro",
     "falhou",
     "falha",
     "ops",
-    "tente novamente",
-    "não está respondendo"
+    "não está respondendo",
+    "por favor, tente novamente"
   ],
   "genericErrorPhrases.pt.opening": [
     "algo deu errado",
@@ -1175,7 +1269,6 @@
     "erro interno do servidor",
     "erro do servidor",
     "erro",
-    "falha",
     "a solicitação falhou",
     "ops"
   ],
@@ -1185,6 +1278,21 @@
     "tente novamente mais tarde",
     "tente mais tarde",
     "nossa equipe foi notificada"
+  ],
+  "genericErrorPhrases.pt.causeless": [
+    "não foi possível",
+    "não é possível",
+    "falha"
+  ],
+  "genericErrorPhrases.pt.filler": [
+    "tente novamente",
+    "tente de novo",
+    "por favor",
+    "desculpe"
+  ],
+  "genericErrorPhrases.pt.causeWords": [
+    "porque",
+    "pois"
   ],
   "genericErrorPhrases.ar.whole": [
     "خطأ",
@@ -1210,6 +1318,19 @@
     "يرجى المحاولة لاحقا",
     "حاول مرة أخرى لاحقا",
     "حاول لاحقا"
+  ],
+  "genericErrorPhrases.ar.causeless": [
+    "تعذر",
+    "لا يمكن"
+  ],
+  "genericErrorPhrases.ar.filler": [
+    "يرجى المحاولة مرة أخرى",
+    "حاول مرة أخرى",
+    "عذرا"
+  ],
+  "genericErrorPhrases.ar.causeWords": [
+    "لأن",
+    "بسبب"
   ],
   "genericErrorPhrases.de.whole": [
     "fehler",
@@ -1241,6 +1362,21 @@
     "versuche es später erneut",
     "später erneut versuchen"
   ],
+  "genericErrorPhrases.de.causeless": [
+    "konnte nicht",
+    "kann nicht"
+  ],
+  "genericErrorPhrases.de.filler": [
+    "bitte versuchen sie es erneut",
+    "versuchen sie es erneut",
+    "bitte erneut versuchen",
+    "erneut versuchen",
+    "bitte",
+    "entschuldigung"
+  ],
+  "genericErrorPhrases.de.causeWords": [
+    "weil"
+  ],
   "genericErrorPhrases.it.whole": [
     "errore",
     "non riuscito",
@@ -1267,6 +1403,21 @@
     "riprovare più tardi",
     "riprova tra poco"
   ],
+  "genericErrorPhrases.it.causeless": [
+    "impossibile",
+    "non è stato possibile"
+  ],
+  "genericErrorPhrases.it.filler": [
+    "riprova",
+    "riprovare",
+    "per favore riprova",
+    "per favore",
+    "ci dispiace"
+  ],
+  "genericErrorPhrases.it.causeWords": [
+    "perché",
+    "poiché"
+  ],
   "genericErrorPhrases.ja.whole": [
     "エラー",
     "失敗",
@@ -1291,6 +1442,9 @@
     "しばらくしてからもう一度お試しください",
     "後でやり直してください"
   ],
+  "genericErrorPhrases.ja.causeless": [],
+  "genericErrorPhrases.ja.filler": [],
+  "genericErrorPhrases.ja.causeWords": [],
   "genericErrorPhrases.ko.whole": [
     "오류",
     "실패",
@@ -1315,6 +1469,9 @@
     "나중에 다시 시도하세요",
     "잠시 후 다시 시도해 주세요"
   ],
+  "genericErrorPhrases.ko.causeless": [],
+  "genericErrorPhrases.ko.filler": [],
+  "genericErrorPhrases.ko.causeWords": [],
   "genericErrorPhrases.ru.whole": [
     "ошибка",
     "сбой",
@@ -1332,7 +1489,6 @@
     "внутренняя ошибка сервера",
     "ошибка сервера",
     "ошибка",
-    "не удалось",
     "запрос не выполнен",
     "упс"
   ],
@@ -1343,5 +1499,20 @@
     "повторите попытку позже",
     "попробуйте еще раз позже",
     "попробуйте ещё раз позже"
+  ],
+  "genericErrorPhrases.ru.causeless": [
+    "не удалось",
+    "невозможно"
+  ],
+  "genericErrorPhrases.ru.filler": [
+    "попробуйте еще раз",
+    "попробуйте ещё раз",
+    "повторите попытку",
+    "пожалуйста",
+    "извините"
+  ],
+  "genericErrorPhrases.ru.causeWords": [
+    "потому что",
+    "так как"
   ]
 }

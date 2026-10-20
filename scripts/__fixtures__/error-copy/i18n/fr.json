@@ -1,5 +1,7 @@
 {
   "common_error_generic_message": "Une erreur est survenue. Veuillez réessayer plus tard.",
-  "invoice_save_failed_title": "La facture n’a pas été enregistrée",
+  "invoice_save_unknown_title": "Enregistrement de la facture : résultat inconnu",
+  "tasks_load_error_message": "Impossible de charger les tâches. Réessayez.",
+  "retry_button_label": "Réessayez",
   "untranslated_line": "Something went wrong"
 }

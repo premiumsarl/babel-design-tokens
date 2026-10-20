@@ -3,7 +3,7 @@
     "name": "FailureKind",
     "description": "Every kind of failure a client must tell apart before it chooses the words of an error (ERROR-3). A client maps each failure to exactly one kind, then builds the copy from the action, the kind and the saved state. Brand-neutral: every Premium SARL brand uses the same kinds.",
     "owner": "client",
-    "ownerNote": "Clients own this list: it classifies what the CLIENT saw (no answer, a gateway page, an envelope, a crash), not what the server sent. The server's half is error-envelope.json. Detection per platform is in ERRORS.md, section 3.",
+    "ownerNote": "Clients own this list: it classifies what the CLIENT saw (no answer, a gateway page, an envelope, a crash), not what the server sent. The server's half is error-envelope.json. Detection per platform is in ERRORS.md, section 4; `classify` below is the code and status half of it, as data.",
     "onUnknown": "reject",
     "onUnknownNote": "A kind is never invented at a call site. A failure that fits none of these is client_bug, which still shows a reference (ERROR-8).",
     "attributes": {
@@ -18,12 +18,13 @@
         "none": "Nothing to retry, because nothing is shown (cancelled) or nothing failed (queued)."
       },
       "savedOnWrite": {
-        "no": "Certain that nothing was saved: the request never left the device, the server refused it with a 4xx, or it answered after rolling back.",
-        "unknown": "The request may have reached the server and no answer came back. Say it may have been saved, and send the person to check before trying again (ERROR-4).",
+        "no": "Certain that nothing was saved: the request provably never left the device (the device was offline before sending, or the connection could not be opened), the server refused it with a 4xx, or the server proved it rolled back (`details.committed: false`, error-envelope.json).",
+        "unknown": "The request may have reached the server and no usable answer proves what happened: a timeout, a connection lost after sending, a gateway page, or a 5xx that does not prove a rollback. Say it may have been saved, and send the person to check before trying again (ERROR-4). This overrides `retry` for a write: Try again is offered only after the person has checked.",
+        "saved": "The server answered 2xx, so the write was kept, even though the client could not read or show the answer. Say it was saved, and send the person to refresh rather than repeat it.",
         "partial": "Some items were saved and some were not; say which.",
         "pending": "Saved on the device and waiting to sync: a confirmation, not an error."
       },
-      "showReference": "true when the message must show a reference support can find (ERROR-7): the server's `reference`, or one the client mints and sends to its crash reporter under the same id.",
+      "showReference": "true when the message must show a reference support can find (ERROR-7): the server's `reference`, or one the client mints. A minted reference is shown only once it reaches a store support can query (the crash reporter, or a log endpoint the client flushes its queued references to once the server answers again). Until one does, the message gives the time the failure started instead.",
       "toast": {
         "visible": "The failure is shown.",
         "silent": "Nothing is shown: the request was cancelled by us, or the change was queued."
@@ -32,18 +33,18 @@
   },
   "kinds": {
     "offline": {
-      "meaning": "The device has no network.",
+      "meaning": "The request never left the device: the device was offline before sending, or the connection could not be opened (no network, DNS lookup or connect failed while the device reports no connection). A transport failure after sending began is never offline.",
       "retry": "when_online",
       "savedOnWrite": "no",
       "showReference": false,
       "toast": "visible"
     },
     "unreachable": {
-      "meaning": "The device is online, but our server refused the connection or could not be found. `where` says which server: `app_server` (a web app's own server, such as a Next.js admin) or `api`.",
+      "meaning": "The device reports a connection, but our server could not be reached, or the connection dropped before it answered. `where` says which server: `app_server` (a web app's own server, such as a Next.js admin) or `api`. The device reporting a connection does not prove the internet works (a captive portal, a LAN without internet, a VPN or DNS failure): the copy says the problem is ours only after a probe to an independent host answered.",
       "where": ["app_server", "api"],
       "retry": "after",
       "savedOnWrite": "unknown",
-      "savedOnWriteNote": "unknown when the request may have left the device; a client that knows it never did says no.",
+      "savedOnWriteNote": "unknown when the request may have left the device (any failure after sending began, including a connection reset or abort); no only when the failure was in the connect phase (DNS lookup, connection refused, no route).",
       "showReference": true,
       "toast": "visible"
     },
@@ -55,14 +56,16 @@
       "toast": "visible"
     },
     "timeout": {
-      "meaning": "The request was sent and no answer came within N seconds (the client's, a proxy's, the gateway's or the host's limit).",
+      "meaning": "The request was sent and no answer came within N seconds (the client's, a proxy's, the gateway's or the host's limit). `where` says whose server: `app_server` or `api`.",
+      "where": ["app_server", "api"],
       "retry": "after",
       "savedOnWrite": "unknown",
       "showReference": true,
       "toast": "visible"
     },
     "front_door": {
-      "meaning": "A CDN, gateway or host answered with its own error page instead of our envelope.",
+      "meaning": "A CDN, gateway or host answered with its own error page instead of our envelope, or (web) a server action failed while the app's own server still answers its probe. `where` says whose front door: `app_server` or `api`.",
+      "where": ["app_server", "api"],
       "retry": "after",
       "savedOnWrite": "unknown",
       "showReference": true,
@@ -83,14 +86,15 @@
       "toast": "visible"
     },
     "busy": {
-      "meaning": "A transient lock on the same record; the server rolled back.",
+      "meaning": "A transient database lock (a deadlock or lock wait) that the server could not get past. The cause may be any other change, not one to the same record. Nothing was saved only when the path ran in one transaction, which the server proves with `details.committed: false`.",
       "retry": "now",
-      "savedOnWrite": "no",
+      "savedOnWrite": "unknown",
       "showReference": false,
-      "toast": "visible"
+      "toast": "visible",
+      "savedOnWriteNote": "no when the envelope carries details.committed: false (the path ran in one transaction and rolled back)."
     },
     "session_ended": {
-      "meaning": "401 after the session refresh failed.",
+      "meaning": "401 after the session refresh failed. The code says why (idle, expired, closed elsewhere, not verified); the wording follows the code, and a 401 with no code gets the neutral sentence.",
       "retry": "manual",
       "savedOnWrite": "no",
       "showReference": false,
@@ -153,23 +157,31 @@
       "toast": "visible"
     },
     "outdated_client": {
-      "meaning": "This build is older than the server: an unknown route, a missing code chunk, or a server action that no longer exists after a deploy.",
+      "meaning": "This build is older than the server: an unknown route, a missing code chunk, or a server action that no longer exists after a deploy. Nothing was sent to a handler, but reloading discards what is typed on the page: a write's copy says to copy it first.",
       "retry": "reload",
       "savedOnWrite": "no",
       "showReference": false,
       "toast": "visible"
     },
     "server_bug": {
-      "meaning": "A 500 in our envelope. A 500 means nothing was kept; a server that kept part of the work answers partial instead.",
+      "meaning": "A 500 in our envelope. The server cannot always know whether a commit happened before the failure (a connection lost after COMMIT, a placeholder saved before the error), so a write's outcome is unknown unless the envelope proves a rollback (`details.committed: false`). A server that kept part of the work answers partial.",
       "retry": "now",
+      "savedOnWrite": "unknown",
+      "showReference": true,
+      "toast": "visible",
+      "savedOnWriteNote": "no when the envelope carries details.committed: false."
+    },
+    "client_bug": {
+      "meaning": "A crash in the client while rendering or booting (an error boundary, ErrorWidget.builder, a boot failure). Not a write's outcome: anything already saved is kept, and changes not yet submitted on the page were not sent. A 2xx the client could not read is unreadable_success, never client_bug.",
+      "retry": "reload",
       "savedOnWrite": "no",
       "showReference": true,
       "toast": "visible"
     },
-    "client_bug": {
-      "meaning": "A crash in the client: a render error, or a 2xx response it could not read.",
+    "unreadable_success": {
+      "meaning": "The server answered 2xx, and the client could not read or show the answer (a parser threw on a new shape, a TypeError or FormatException while decoding). The server did the work: a write was saved. The client mints a reference and sends it to its crash reporter.",
       "retry": "reload",
-      "savedOnWrite": "no",
+      "savedOnWrite": "saved",
       "showReference": true,
       "toast": "visible"
     },
@@ -194,5 +206,101 @@
       "showReference": false,
       "toast": "silent"
     }
+  },
+  "classify": {
+    "$note": "The envelope half of ERRORS.md section 4, step 4, as data. `codes` is ordered and the first rule whose pattern matches the wire errorCode wins; in a pattern, `*` stands for any run of [a-z0-9_.]. A code that matches no rule, or an envelope with no code, is classified by `status`: the exact status first, then its class (`4xx`, `5xx`). Nothing is ever inferred from a suffix such as _unavailable. npm run check:contracts runs every error-codes.json value through these rules and checks ERRORS.md lists the same ones.",
+    "codes": [
+      {
+        "match": ["error.session.*"],
+        "kind": "session_ended"
+      },
+      {
+        "match": ["error.auth.step_up_required"],
+        "kind": "step_up"
+      },
+      {
+        "match": ["error.auth.csrf_invalid"],
+        "kind": "session_ended",
+        "note": "after one silent refetch of the CSRF token"
+      },
+      {
+        "match": ["error.auth.permission_denied", "*.permission_denied", "*_forbidden"],
+        "kind": "forbidden"
+      },
+      {
+        "match": ["error.subscription.*"],
+        "kind": "plan"
+      },
+      {
+        "match": ["*.access_not_yet"],
+        "kind": "not_yet"
+      },
+      {
+        "match": ["error.generic.validation"],
+        "kind": "validation"
+      },
+      {
+        "match": ["*.route_not_found"],
+        "kind": "outdated_client",
+        "note": "an unknown route: this build calls an endpoint the server no longer has"
+      },
+      {
+        "match": ["*.not_found", "*_not_found"],
+        "kind": "not_found"
+      },
+      {
+        "match": ["error.generic.database_busy"],
+        "kind": "busy"
+      },
+      {
+        "match": ["error.generic.conflict", "*.conflict"],
+        "kind": "conflict"
+      },
+      {
+        "match": ["*rate_limited", "*_cooldown"],
+        "kind": "rate_limited"
+      },
+      {
+        "match": ["error.generic.service_unavailable", "*.ai_unavailable"],
+        "kind": "unavailable",
+        "note": "outages by explicit code only; a code that merely ends in _unavailable is a refusal (a 400, 404 or 409) and falls through to the status table"
+      },
+      {
+        "match": ["error.proxy.upstream_unreachable"],
+        "kind": "unreachable",
+        "where": "api",
+        "note": "savedOnWrite unknown for any method but GET: the admin proxy's fetch also fails this way when the socket closes after the API received the body"
+      },
+      {
+        "match": ["error.proxy.upstream_timeout"],
+        "kind": "timeout"
+      },
+      {
+        "match": ["error.generic.internal"],
+        "kind": "server_bug"
+      },
+      {
+        "match": ["*.partially_saved"],
+        "kind": "partial"
+      }
+    ],
+    "status": {
+      "400": "validation",
+      "422": "validation",
+      "401": "session_ended",
+      "402": "plan",
+      "403": "forbidden",
+      "404": "not_found",
+      "410": "not_found",
+      "409": "conflict",
+      "413": "too_large",
+      "429": "rate_limited",
+      "502": "front_door",
+      "503": "unavailable",
+      "504": "timeout",
+      "4xx": "validation",
+      "5xx": "server_bug"
+    },
+    "statusNote": "A 4xx the table does not name is validation shown with the server's localized sentence (never the fields wording) when that sentence is not from a generic code; a 5xx it does not name is server_bug."
   }
 }

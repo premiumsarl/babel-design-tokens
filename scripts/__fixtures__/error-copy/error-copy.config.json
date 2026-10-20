@@ -1,8 +1,19 @@
 {
   "phrases": "../../../contracts/rules/generic-error-phrases.json",
-  "catalogues": ["i18n"],
-  "sources": ["src"],
-  "counters": { "rendered-err-message": "\\b(?:err|e|error)\\.message\\b" },
-  "allow": { "i18n/en.json#payments_status_failed_label generic": "a one-word status badge on a payment row (ERROR-2)" },
+  "catalogues": [
+    "i18n"
+  ],
+  "sources": [
+    "src"
+  ],
+  "counters": {
+    "rendered-err-message": "\\b(?:err|e|error)\\.message\\b",
+    "generic-key-fallback": {
+      "pattern": "\\bt\\(\\s*['\"]common_error_generic_message['\"]"
+    }
+  },
+  "allow": {
+    "i18n/en.json#payments_status_failed_label generic": "a one-word status badge on a payment row (ERROR-2)"
+  },
   "baseline": "baseline.json"
 }

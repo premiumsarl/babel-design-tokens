@@ -1545,6 +1545,7 @@ abstract final class BabelFailureKind {
   static const String outdatedClient = 'outdated_client';
   static const String serverBug = 'server_bug';
   static const String clientBug = 'client_bug';
+  static const String unreadableSuccess = 'unreadable_success';
   static const String partial = 'partial';
   static const String cancelled = 'cancelled';
   static const String queued = 'queued';
@@ -1571,6 +1572,7 @@ abstract final class BabelFailureKind {
     'outdated_client',
     'server_bug',
     'client_bug',
+    'unreadable_success',
     'partial',
     'cancelled',
     'queued',
@@ -1598,12 +1600,13 @@ abstract final class BabelFailureKind {
     'outdated_client': 'reload',
     'server_bug': 'now',
     'client_bug': 'reload',
+    'unreadable_success': 'reload',
     'partial': 'manual',
     'cancelled': 'none',
     'queued': 'none',
   };
 
-  /// Kind -> no | unknown | partial | pending: what a failed WRITE kept.
+  /// Kind -> no | unknown | saved | partial | pending: what a failed WRITE kept.
   static const Map<String, String> savedOnWrite = <String, String>{
     'offline': 'no',
     'unreachable': 'unknown',
@@ -1612,7 +1615,7 @@ abstract final class BabelFailureKind {
     'front_door': 'unknown',
     'unavailable': 'no',
     'rate_limited': 'no',
-    'busy': 'no',
+    'busy': 'unknown',
     'session_ended': 'no',
     'step_up': 'no',
     'forbidden': 'no',
@@ -1623,8 +1626,9 @@ abstract final class BabelFailureKind {
     'not_found': 'no',
     'too_large': 'no',
     'outdated_client': 'no',
-    'server_bug': 'no',
+    'server_bug': 'unknown',
     'client_bug': 'no',
+    'unreadable_success': 'saved',
     'partial': 'partial',
     'cancelled': 'unknown',
     'queued': 'pending',
@@ -1638,6 +1642,7 @@ abstract final class BabelFailureKind {
     'unavailable',
     'server_bug',
     'client_bug',
+    'unreadable_success',
     'partial',
   ];
 
@@ -1652,6 +1657,23 @@ abstract final class BabelFailureKind {
     'app_server',
     'api',
   ];
+
+  /// Kind -> whose server it happened on, for the kinds that say
+  /// (app_server: a web app's own server; api).
+  static const Map<String, List<String>> where = <String, List<String>>{
+    'unreachable': <String>[
+      'app_server',
+      'api',
+    ],
+    'timeout': <String>[
+      'app_server',
+      'api',
+    ],
+    'front_door': <String>[
+      'app_server',
+      'api',
+    ],
+  };
 }
 
 /// The error body every API returns (ERROR-6).
@@ -1663,6 +1685,7 @@ abstract final class BabelErrorEnvelope {
     'message',
     'details',
     'details.gate',
+    'details.committed',
     'fieldErrors',
     'retryAfterSeconds',
     'reference',
@@ -1707,7 +1730,9 @@ abstract final class BabelErrorEnvelope {
 /// contracts/rules/generic-error-phrases.json `$meta.matching` describes
 /// (lower case, straight apostrophes, single spaces). A Dart guard matches a
 /// normalized message: [whole] = the message is the phrase, [opening] = it
-/// starts with it at a word boundary, [anywhere] = it contains it.
+/// starts with it at a word boundary, [anywhere] = it contains it,
+/// [causeless] = it starts with it and every later clause is a [filler]
+/// (no [causeWords] in the first clause).
 abstract final class BabelGenericErrorPhrases {
   static const List<String> locales = <String>[
     'en',
@@ -1732,13 +1757,17 @@ abstract final class BabelGenericErrorPhrases {
       'please try again',
       'still not responding',
       'not responding',
+      'whoops',
+      'request timed out',
+      'service unavailable',
+      'load failed',
+      'an error occured',
     ],
     'fr': <String>[
       'erreur',
       'échec',
       'échoué',
       'oups',
-      'réessayez',
       'veuillez réessayer',
       'ne répond toujours pas',
       'ne répond pas',
@@ -1748,10 +1777,10 @@ abstract final class BabelGenericErrorPhrases {
       'falló',
       'fallido',
       'ups',
-      'vuelve a intentarlo',
-      'inténtalo de nuevo',
-      'inténtelo de nuevo',
       'no responde',
+      'por favor, inténtalo de nuevo',
+      'por favor, inténtelo de nuevo',
+      'por favor, vuelve a intentarlo',
     ],
     'zh': <String>[
       '错误',
@@ -1766,8 +1795,8 @@ abstract final class BabelGenericErrorPhrases {
       'falhou',
       'falha',
       'ops',
-      'tente novamente',
       'não está respondendo',
+      'por favor, tente novamente',
     ],
     'ar': <String>[
       'خطأ',
@@ -1823,7 +1852,6 @@ abstract final class BabelGenericErrorPhrases {
       'a problem occurred',
       'oops',
       'error',
-      'failed to',
       'failed:',
       'request failed',
       'internal server error',
@@ -1834,6 +1862,8 @@ abstract final class BabelGenericErrorPhrases {
       'sorry, something',
       'sorry, an error',
       'unable to complete your request',
+      'whoops',
+      'an error occured',
     ],
     'fr': <String>[
       'une erreur est survenue',
@@ -1848,7 +1878,6 @@ abstract final class BabelGenericErrorPhrases {
       'un problème s\'est produit',
       'oups',
       'erreur',
-      'échec',
       'la requête a échoué',
       'la demande a échoué',
       'erreur réseau',
@@ -1903,7 +1932,6 @@ abstract final class BabelGenericErrorPhrases {
       'erro interno do servidor',
       'erro do servidor',
       'erro',
-      'falha',
       'a solicitação falhou',
       'ops',
     ],
@@ -1981,7 +2009,6 @@ abstract final class BabelGenericErrorPhrases {
       'внутренняя ошибка сервера',
       'ошибка сервера',
       'ошибка',
-      'не удалось',
       'запрос не выполнен',
       'упс',
     ],
@@ -2001,6 +2028,7 @@ abstract final class BabelGenericErrorPhrases {
       'our team has been notified',
       'we have been notified',
       'we\'ve been notified',
+      'an error occured',
     ],
     'fr': <String>[
       'une erreur est survenue',
@@ -2092,6 +2120,170 @@ abstract final class BabelGenericErrorPhrases {
       'повторите попытку позже',
       'попробуйте еще раз позже',
       'попробуйте ещё раз позже',
+    ],
+  };
+
+  static const Map<String, List<String>> causeless = <String, List<String>>{
+    'en': <String>[
+      'could not',
+      'couldn\'t',
+      'unable to',
+      'cannot',
+      'can\'t',
+      'failed to',
+    ],
+    'fr': <String>[
+      'impossible de',
+      'impossible d\'',
+      'échec',
+      'nous n\'avons pas pu',
+      'nous ne pouvons pas',
+    ],
+    'es': <String>[
+      'no se pudo',
+      'no se ha podido',
+      'no fue posible',
+      'no es posible',
+    ],
+    'zh': <String>[
+      '无法',
+      '未能',
+    ],
+    'pt': <String>[
+      'não foi possível',
+      'não é possível',
+      'falha',
+    ],
+    'ar': <String>[
+      'تعذر',
+      'لا يمكن',
+    ],
+    'de': <String>[
+      'konnte nicht',
+      'kann nicht',
+    ],
+    'it': <String>[
+      'impossibile',
+      'non è stato possibile',
+    ],
+    'ja': <String>[],
+    'ko': <String>[],
+    'ru': <String>[
+      'не удалось',
+      'невозможно',
+    ],
+  };
+
+  static const Map<String, List<String>> filler = <String, List<String>>{
+    'en': <String>[
+      'please try again',
+      'try again',
+      'please retry',
+      'retry',
+      'try again later',
+      'please try again later',
+      'sorry',
+      'please',
+    ],
+    'fr': <String>[
+      'veuillez réessayer',
+      'réessayez',
+      'merci de réessayer',
+      'veuillez réessayer plus tard',
+      'réessayez plus tard',
+      'désolé',
+      'désolée',
+    ],
+    'es': <String>[
+      'inténtalo de nuevo',
+      'inténtelo de nuevo',
+      'vuelve a intentarlo',
+      'vuelva a intentarlo',
+      'por favor',
+      'lo sentimos',
+    ],
+    'zh': <String>[
+      '请重试',
+      '请再试一次',
+      '请稍后重试',
+      '请稍后再试',
+    ],
+    'pt': <String>[
+      'tente novamente',
+      'tente de novo',
+      'por favor',
+      'desculpe',
+    ],
+    'ar': <String>[
+      'يرجى المحاولة مرة أخرى',
+      'حاول مرة أخرى',
+      'عذرا',
+    ],
+    'de': <String>[
+      'bitte versuchen sie es erneut',
+      'versuchen sie es erneut',
+      'bitte erneut versuchen',
+      'erneut versuchen',
+      'bitte',
+      'entschuldigung',
+    ],
+    'it': <String>[
+      'riprova',
+      'riprovare',
+      'per favore riprova',
+      'per favore',
+      'ci dispiace',
+    ],
+    'ja': <String>[],
+    'ko': <String>[],
+    'ru': <String>[
+      'попробуйте еще раз',
+      'попробуйте ещё раз',
+      'повторите попытку',
+      'пожалуйста',
+      'извините',
+    ],
+  };
+
+  static const Map<String, List<String>> causeWords = <String, List<String>>{
+    'en': <String>[
+      'because',
+      'since',
+    ],
+    'fr': <String>[
+      'car',
+      'parce que',
+      'puisque',
+    ],
+    'es': <String>[
+      'porque',
+      'ya que',
+      'debido a que',
+    ],
+    'zh': <String>[
+      '因为',
+      '由于',
+    ],
+    'pt': <String>[
+      'porque',
+      'pois',
+    ],
+    'ar': <String>[
+      'لأن',
+      'بسبب',
+    ],
+    'de': <String>[
+      'weil',
+    ],
+    'it': <String>[
+      'perché',
+      'poiché',
+    ],
+    'ja': <String>[],
+    'ko': <String>[],
+    'ru': <String>[
+      'потому что',
+      'так как',
     ],
   };
 }

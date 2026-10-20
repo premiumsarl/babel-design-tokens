@@ -710,7 +710,7 @@ export declare const LIMITS: {
 /** How a failure kind behaves. See contracts/failure-kinds.json $meta.attributes. */
 export interface FailureKindSpec {
   readonly retry: 'now' | 'after' | 'when_online' | 'manual' | 'dialog' | 'reload' | 'never' | 'none';
-  readonly savedOnWrite: 'no' | 'unknown' | 'partial' | 'pending';
+  readonly savedOnWrite: 'no' | 'unknown' | 'saved' | 'partial' | 'pending';
   readonly showReference: boolean;
   readonly toast: 'visible' | 'silent';
   readonly where?: readonly string[];
@@ -720,11 +720,11 @@ export declare const FAILURE_KINDS: {
   readonly offline: { readonly retry: 'when_online'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
   readonly unreachable: { readonly retry: 'after'; readonly savedOnWrite: 'unknown'; readonly showReference: true; readonly toast: 'visible'; readonly where: readonly ['app_server', 'api'] };
   readonly intercepted: { readonly retry: 'manual'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
-  readonly timeout: { readonly retry: 'after'; readonly savedOnWrite: 'unknown'; readonly showReference: true; readonly toast: 'visible' };
-  readonly front_door: { readonly retry: 'after'; readonly savedOnWrite: 'unknown'; readonly showReference: true; readonly toast: 'visible' };
+  readonly timeout: { readonly retry: 'after'; readonly savedOnWrite: 'unknown'; readonly showReference: true; readonly toast: 'visible'; readonly where: readonly ['app_server', 'api'] };
+  readonly front_door: { readonly retry: 'after'; readonly savedOnWrite: 'unknown'; readonly showReference: true; readonly toast: 'visible'; readonly where: readonly ['app_server', 'api'] };
   readonly unavailable: { readonly retry: 'after'; readonly savedOnWrite: 'no'; readonly showReference: true; readonly toast: 'visible' };
   readonly rate_limited: { readonly retry: 'after'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
-  readonly busy: { readonly retry: 'now'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
+  readonly busy: { readonly retry: 'now'; readonly savedOnWrite: 'unknown'; readonly showReference: false; readonly toast: 'visible' };
   readonly session_ended: { readonly retry: 'manual'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
   readonly step_up: { readonly retry: 'dialog'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
   readonly forbidden: { readonly retry: 'never'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
@@ -735,18 +735,19 @@ export declare const FAILURE_KINDS: {
   readonly not_found: { readonly retry: 'never'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
   readonly too_large: { readonly retry: 'never'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
   readonly outdated_client: { readonly retry: 'reload'; readonly savedOnWrite: 'no'; readonly showReference: false; readonly toast: 'visible' };
-  readonly server_bug: { readonly retry: 'now'; readonly savedOnWrite: 'no'; readonly showReference: true; readonly toast: 'visible' };
+  readonly server_bug: { readonly retry: 'now'; readonly savedOnWrite: 'unknown'; readonly showReference: true; readonly toast: 'visible' };
   readonly client_bug: { readonly retry: 'reload'; readonly savedOnWrite: 'no'; readonly showReference: true; readonly toast: 'visible' };
+  readonly unreadable_success: { readonly retry: 'reload'; readonly savedOnWrite: 'saved'; readonly showReference: true; readonly toast: 'visible' };
   readonly partial: { readonly retry: 'manual'; readonly savedOnWrite: 'partial'; readonly showReference: true; readonly toast: 'visible' };
   readonly cancelled: { readonly retry: 'none'; readonly savedOnWrite: 'unknown'; readonly showReference: false; readonly toast: 'silent' };
   readonly queued: { readonly retry: 'none'; readonly savedOnWrite: 'pending'; readonly showReference: false; readonly toast: 'silent' };
 };
 /** Every failure kind a client classifies into (ERROR-3). */
 export type FailureKind = keyof typeof FAILURE_KINDS;
-export declare const FAILURE_KIND_VALUES: readonly ['offline', 'unreachable', 'intercepted', 'timeout', 'front_door', 'unavailable', 'rate_limited', 'busy', 'session_ended', 'step_up', 'forbidden', 'plan', 'not_yet', 'validation', 'conflict', 'not_found', 'too_large', 'outdated_client', 'server_bug', 'client_bug', 'partial', 'cancelled', 'queued'];
+export declare const FAILURE_KIND_VALUES: readonly ['offline', 'unreachable', 'intercepted', 'timeout', 'front_door', 'unavailable', 'rate_limited', 'busy', 'session_ended', 'step_up', 'forbidden', 'plan', 'not_yet', 'validation', 'conflict', 'not_found', 'too_large', 'outdated_client', 'server_bug', 'client_bug', 'unreadable_success', 'partial', 'cancelled', 'queued'];
 
 export declare const ERROR_ENVELOPE: {
-  readonly fields: readonly ['status', 'errorCode', 'message', 'details', 'details.gate', 'fieldErrors', 'retryAfterSeconds', 'reference'];
+  readonly fields: readonly ['status', 'errorCode', 'message', 'details', 'details.gate', 'details.committed', 'fieldErrors', 'retryAfterSeconds', 'reference'];
   readonly gateKinds: readonly ['permission', 'role', 'plan', 'device', 'occupancy', 'company', 'setup'];
   readonly exposedHeaders: readonly ['Retry-After', 'RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'x-request-id'];
   readonly reference: { readonly serverLength: 8; readonly clientPrefix: 'E-'; readonly clientLength: 6 };
@@ -756,11 +757,18 @@ export type ErrorGateKind = (typeof ERROR_ENVELOPE)['gateKinds'][number];
 
 export declare const GENERIC_ERROR_CODES: readonly ['error.generic.validation', 'error.auth.permission_denied', 'error.generic.invalid_id', 'error.generic.not_found', 'error.generic.internal', 'error.generic.conflict', 'error.generic.service_unavailable', 'error.generic.rate_limited', 'error.auth.unauthorized', 'error.auth.invalid_user', 'error.payment.failed', 'error.generic.database_busy'];
 
-/** The banned phrases of one locale: a whole message, an opening, or anywhere. */
+/**
+ * The banned phrases of one locale: a whole message, an opening, anywhere,
+ * or an opening with no cause after it (`causeless`, which reads
+ * `filler` and `causeWords`).
+ */
 export interface GenericErrorPhraseList {
   readonly whole: readonly string[];
   readonly opening: readonly string[];
   readonly anywhere: readonly string[];
+  readonly causeless: readonly string[];
+  readonly filler: readonly string[];
+  readonly causeWords: readonly string[];
 }
 export declare const GENERIC_ERROR_PHRASES: {
   readonly en: GenericErrorPhraseList;

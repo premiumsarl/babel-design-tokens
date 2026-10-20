@@ -217,23 +217,28 @@ Every client maps every failure to one kind from
 `contracts/failure-kinds.json`: offline, unreachable, intercepted, timeout,
 front door, unavailable, rate limited, busy, session ended, step-up,
 forbidden, plan, not yet, validation, conflict, not found, too large,
-outdated client, server bug, client bug, partial, cancelled or queued.
+outdated client, server bug, client bug, unreadable success, partial,
+cancelled or queued.
 It then builds the copy from three things: the action, the kind and the
 saved state. A raw transport text ("Network Error", "Failed to fetch",
 "Request failed with status code 502"), a gateway or CDN body, or an
 exception's text never reaches the screen. A cancelled request shows nothing.
-A queued offline change is a confirmation, not an error.
+A queued offline change is a confirmation, not an error. A 2xx the client
+could not read is a success it failed to show, never "nothing was sent".
 
 ### ERROR-4 · An unknown outcome is said as unknown
 
-When a write was sent and no answer came back (a timeout, a connection lost
-after sending, or a gateway 502/504), the client does not know whether it was
-saved, and it says so: "It may have been saved — check before trying again."
-For money it says: "Do not pay again; check your payments in a few minutes."
-The words "not saved" are used only when that is certain: the request never
-left the device, or the server refused it with a 4xx, or the server answered
-an error after rolling back. A server that answers 5xx after committing must
-say what it kept (the partial kind) instead of a plain failure.
+When a write was sent and no usable answer came back (a timeout, a connection
+lost after sending, a gateway 502/504, or a 500 that does not prove a
+rollback), the client does not know whether it was saved, and it says so: "It
+may have been saved — check before trying again." For money it says: "Do not
+pay again; check your payments in a few minutes." The words "not saved" are
+used only when that is certain: the request provably never left the device,
+or the server refused it with a 4xx, or the server proved it rolled back
+(`details.committed: false`). A device that reports no connection at the
+moment of the error does not prove the request never left. A server that
+answers 5xx after committing must say what it kept (the partial kind) instead
+of a plain failure.
 
 ### ERROR-5 · A denial names the permission and who can grant it
 
@@ -255,8 +260,10 @@ and `reference`.
   attached to a throw whose sentence is more specific.
 - Localization never replaces a specific sentence with a generic code's
   catalogue line.
-- A 503 means nothing was done and it carries `Retry-After`. A 500 means
-  nothing was kept, or else it is a partial.
+- A 503 means nothing was done and it carries `Retry-After`. A 500 sets
+  `details.committed: false` only when it rolled back everything; a 500 that
+  kept part is a partial; any other 500 leaves the outcome unknown, because
+  the server cannot always know whether it committed.
 - An unknown route answers in the envelope, never as an HTML page.
 - A status code that released clients parse changes only behind a client
   opt-in, until every client that reads the old one is gone.
@@ -267,6 +274,11 @@ and `reference`.
   also written to the log line.
 - A client crash mints its own reference and sends it to the crash reporter
   under the same id.
+- Every reference a client mints reaches a store support can query: the
+  crash reporter, an error sink that is not consent-gated, or a queue the
+  client flushes to its own server's log endpoint once that server answers
+  again. A reference that lives only in the browser is not shown; until it
+  can be, the message gives the time the failure started instead.
 - The reference is shown on server bugs, front-door failures, unavailable
   services and client bugs, with a way to copy it.
 - "Our team has been notified" is written only where an alert really fires.

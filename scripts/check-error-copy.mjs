@@ -5,14 +5,18 @@
  *
  * One scanner for every app, vendored the way check-tokens.mjs is. It reads
  * the banned phrases from contracts/rules/generic-error-phrases.json and
- * counts four kinds of debt:
+ * counts three kinds of debt:
  *
- *   generic          a catalogue value, or a source literal that reads as
- *                    prose, matching a banned phrase for its locale (whole,
- *                    opening or anywhere; see the JSON's $meta.matching).
- *                    Adjacent string literals are JOINED first, so
- *                    'Something went ' + 'wrong' and Dart's
- *                    'Something went ' 'wrong' are one message.
+ *   generic          a catalogue value, or a source literal or JSX text that
+ *                    reads as prose, matching a banned phrase (whole,
+ *                    opening, anywhere or causeless; see the JSON's
+ *                    $meta.matching). A catalogue is checked against its own
+ *                    locale and English (an untranslated value); a source
+ *                    literal against every locale. Adjacent string literals
+ *                    are JOINED first, so 'Something went ' + 'wrong' and
+ *                    Dart's 'Something went ' 'wrong' are one message; the
+ *                    pieces of one JSX element around {expressions} and
+ *                    inline tags are joined the same way.
  *   title-repeats    a title whose body repeats it: sibling catalogue keys
  *                    (`x_title` beside `x_message` / `x_description_message`
  *                    / `x.body` …), or `title` beside `body`/`message`/…
@@ -32,7 +36,12 @@
  *
  * Usage:
  *   node check-error-copy.mjs --config <file> [--baseline <file>]
- *        [--update-baseline | --init-baseline] [--json]
+ *        [--update-baseline | --init-baseline] [--base <git-ref>] [--json]
+ *
+ * --base <git-ref> (CI: the merge base, e.g. origin/main) also fails when the
+ * baseline holds an entry above, or beyond, the one at that ref, and when
+ * `allow` gained an entry without { "reason", "approved" }. Without it the
+ * "only goes down" rule rests on review.
  *
  * Config (JSON; every path is relative to the config file's folder, which is
  * also the root the report's paths are relative to):
@@ -42,18 +51,24 @@
  *     "sources":    ["src"],                   files, or folders walked recursively
  *     "extensions": [".ts", ".tsx"],           default .js .jsx .mjs .cjs .ts .tsx .dart
  *     "skip":       ["generated"],             extra folder names to skip
- *     "counters":   { "rendered-err-message": "\\b(?:err|e|error)\\.message\\b" },
- *     "allow":      { "<finding id>": "why this one is not a message (ERROR-2 status badge, …)" },
+ *     "counters":   { "rendered-err-message": "\\b(?:err|e|error)\\.message\\b",
+ *                     "generic-key-fallback": { "pattern": "\\bt\\(\\s*['\"]common_error_generic_message['\"]", "scope": "source" } },
+ *                                              scope source (default): comments removed, literals kept;
+ *                                              scope code: literals emptied too
+ *     "allow":      { "<finding id>": "why this one is not a message (ERROR-2 status badge, …)",
+ *                     "<new finding id>": { "reason": "…", "approved": "<who>, <date>" } },
  *     "baseline":   ".error-copy-baseline.json"
  *   }
  *
  * Exit: 0 clean · 1 a finding over its baseline, a baseline above the real
- * count, or a stale allow · 2 usage or config error.
+ * count, a stale allow, or (with --base) a baseline raised since the ref or
+ * an unapproved new allow · 2 usage or config error.
  *
  * Canonical copy: premiumsarl/babel-design-tokens scripts/check-error-copy.mjs.
  * `scripts/` is outside the package's `files`, so consumers hold copies.
  * Re-vendor by patch, and keep the `Vendored from …` header each copy adds.
  */
+import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve, sep, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,8 +92,11 @@ const NO_SPACE_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p
 const WORD_CHAR = /[\p{L}\p{N}]/u;
 const TRAILING_PUNCT = /[\s.!?。！？…:;,，、"')\]]+$/u;
 
+// No boundary is needed after a Han/Kana/Hangul character, or after a phrase
+// that ends in punctuation (« impossible d' » + « enregistrer »).
 const boundaryAfter = (phrase, text, end) =>
-  end >= text.length || NO_SPACE_SCRIPT.test(phrase.at(-1)) || !WORD_CHAR.test(text[end]);
+  end >= text.length || NO_SPACE_SCRIPT.test(phrase.at(-1)) || !WORD_CHAR.test(phrase.at(-1))
+  || !WORD_CHAR.test(text[end]);
 const boundaryBefore = (phrase, text, start) =>
   start === 0 || NO_SPACE_SCRIPT.test(phrase[0]) || !WORD_CHAR.test(text[start - 1]);
 
@@ -87,7 +105,7 @@ const boundaryBefore = (phrase, text, start) =>
  * @param {object} phrases  the JSON's `phrases` ({ en: { whole, opening, anywhere }, … })
  * @param {string} message  raw text
  * @param {string[]|null} locales  the message's locale(s); null = every locale (a source literal)
- * @returns {{locale: string, mode: 'whole'|'opening'|'anywhere', phrase: string}|null}
+ * @returns {{locale: string, mode: 'whole'|'opening'|'anywhere'|'causeless', phrase: string}|null}
  */
 export function matchGeneric(phrases, message, locales = null) {
   const text = normalize(message);
@@ -105,16 +123,47 @@ export function matchGeneric(phrases, message, locales = null) {
       }
     }
     for (const phrase of list.anywhere ?? []) {
-      let at = text.indexOf(phrase);
-      while (at !== -1) {
-        if (boundaryBefore(phrase, text, at) && boundaryAfter(phrase, text, at + phrase.length)) {
-          return { locale, mode: 'anywhere', phrase };
-        }
-        at = text.indexOf(phrase, at + 1);
+      if (containsAt(phrase, text)) return { locale, mode: 'anywhere', phrase };
+    }
+    for (const phrase of list.causeless ?? []) {
+      if (text.startsWith(phrase) && boundaryAfter(phrase, text, phrase.length)
+        && !causeFollows(list, text, phrase.length)) {
+        return { locale, mode: 'causeless', phrase };
       }
     }
   }
   return null;
+}
+
+/** The phrase occurs in the text at word boundaries on both sides. */
+function containsAt(phrase, text) {
+  let at = text.indexOf(phrase);
+  while (at !== -1) {
+    if (boundaryBefore(phrase, text, at) && boundaryAfter(phrase, text, at + phrase.length)) return true;
+    at = text.indexOf(phrase, at + 1);
+  }
+  return false;
+}
+
+// Where one clause ends: sentence and clause punctuation (Latin, CJK, Arabic),
+// an opening parenthesis, or a spaced dash.
+const CLAUSE_BREAK = /[.!?。！？:：;；,，、،(（]| [—–-] /u;
+
+/**
+ * After a `causeless` opening: does anything follow that could be a cause?
+ * The first clause must hold none of `causeWords`, and every later clause
+ * must be a `filler` ("please try again") or empty, for the message to be
+ * cause-less.
+ */
+function causeFollows(list, text, from) {
+  const cut = text.slice(from).search(CLAUSE_BREAK);
+  const first = cut === -1 ? text : text.slice(0, from + cut);
+  if ((list.causeWords ?? []).some((w) => containsAt(w, first))) return true;
+  if (cut === -1) return false;
+  const filler = new Set(list.filler ?? []);
+  return text.slice(from + cut).split(CLAUSE_BREAK)
+    .map((c) => c.replace(TRAILING_PUNCT, '').replace(/^[^\p{L}\p{N}]+/u, '').trim())
+    .some((c) => c && !filler.has(c));
 }
 
 /** A title its body repeats: equal, or the body opens with it (ERROR-1). */
@@ -141,10 +190,15 @@ const REGEX_PRECEDER = /(?:^|[(,=:[!&|?{};+\-*%~^]|\breturn|\btypeof|\bcase|\bdo
 /**
  * Split a JS/TS/Dart source into code and string literals, joining adjacent
  * literals ('a' + 'b', and Dart's 'a' 'b') into one message. Comments are
- * dropped. Interpolations (`${…}`) become `{}`.
- * @returns {{strings: {value: string, line: number, logged: boolean}[], code: string, skeleton: string}}
- *   `code` is the source without comments; `skeleton` replaces each joined
- *   literal with \u0000<index>\u0000, for the object-literal title check.
+ * dropped. Interpolations (`${…}`) become `{}`. A backtick straight after an
+ * identifier opens a tagged template (html`…`, t`…`), which is a string too.
+ * In .tsx/.jsx, JSX text is read as well (see jsxTextRuns).
+ * @returns {{strings: {value: string, line: number, logged: boolean}[], code: string, source: string, skeleton: string}}
+ *   `code` is the source without comments and with every literal emptied;
+ *   `source` is the source without comments, literals kept (what counters
+ *   match, so a counter can see `t('common_error_generic_message')`);
+ *   `skeleton` replaces each joined literal with \u0000<index>\u0000, for the
+ *   object-literal title check.
  */
 export function extractLiterals(src, ext = '.ts') {
   const dart = ext === '.dart';
@@ -153,12 +207,14 @@ export function extractLiterals(src, ext = '.ts') {
   let i = 0;
   let line = 1;
   let code = '';
-  const pushCode = (s) => {
+  let source = '';
+  const pushCode = (s, raw = s) => {
     if (!s) return;
     const last = parts.at(-1);
     if (last && last.type === 'code') last.text += s;
     else parts.push({ type: 'code', text: s });
     code += s;
+    source += raw;
   };
   const countLines = (s) => { for (const c of s) if (c === '\n') line += 1; };
 
@@ -211,7 +267,8 @@ export function extractLiterals(src, ext = '.ts') {
       if (src[j] === '/') {
         let k = j + 1;
         while (k < src.length && /[a-z]/i.test(src[k])) k += 1;
-        pushCode(src.slice(i, k));
+        // `source` gets a neutral regex: its quotes and brackets would mislead the JSX walk.
+        pushCode(src.slice(i, k), `/x/${src.slice(j + 1, k)}`);
         i = k;
         continue;
       }
@@ -221,7 +278,9 @@ export function extractLiterals(src, ext = '.ts') {
       // A quote straight after a letter is an apostrophe in prose (JSX text:
       // "didn't"), never a string opener, except Dart's raw-string `r'`.
       const rawPrefix = dart && prev === 'r' && !/[\w$]/.test(src[i - 2] ?? '');
-      if (/[\p{L}\p{N}_$]/u.test(prev) && !rawPrefix) {
+      // A backtick after an identifier is a tagged template: html`…`, t`…`.
+      const tagged = !dart && c === '`' && /[\w$]/.test(prev);
+      if (/[\p{L}\p{N}_$]/u.test(prev) && !rawPrefix && !tagged) {
         pushCode(c);
         i += 1;
         continue;
@@ -252,6 +311,7 @@ export function extractLiterals(src, ext = '.ts') {
         j += 1;
       }
       j = Math.min(src.length, j + quote.length);
+      source += src.slice(i, j);
       const gap = parts.at(-1);
       const before = gap && gap.type === 'code' ? gap.text : '';
       const prevStr = gap && gap.type === 'code' ? parts.at(-2) : gap;
@@ -282,16 +342,132 @@ export function extractLiterals(src, ext = '.ts') {
       skeleton += p.text;
     }
   }
-  // JSX text between tags is prose too: `<p>Something went wrong</p>`.
+  // JSX text is prose too: `<p>Something went wrong. {reference}</p>`.
   if (jsx) {
-    for (const p of parts) {
-      if (p.type !== 'code') continue;
-      for (const m of p.text.matchAll(/>([^<>{}\u0000]*\p{L}[^<>{}\u0000]*)</gu)) {
-        if (m[1].trim()) strings.push({ value: m[1].trim(), line: 0, logged: false, jsxText: true });
+    for (const value of jsxTextRuns(source)) strings.push({ value, line: 0, logged: false, jsxText: true });
+  }
+  return { strings, code, source, skeleton };
+}
+
+// Inline elements do not end a sentence: `Something went <b>wrong</b>.` is one message.
+const INLINE_TAGS = new Set([
+  'a', 'abbr', 'b', 'bdi', 'bdo', 'cite', 'code', 'data', 'dfn', 'em', 'i', 'kbd', 'mark', 'q', 's',
+  'samp', 'small', 'span', 'strong', 'sub', 'sup', 'time', 'u', 'var',
+]);
+// A word after which `<` opens JSX rather than comparing: `return <p>…`.
+const JSX_AFTER_WORD = new Set(['return', 'yield', 'await', 'case', 'default', 'else', 'do', 'in', 'of', 'typeof', 'void']);
+
+/**
+ * The text of every JSX element in a comment-free source, one message per
+ * element: the pieces around `{expressions}` (which become `{}`) and around
+ * inline child tags are joined, so `<p>Ref {ref}. Something went wrong</p>`
+ * is "Ref {}. Something went wrong". Quotes in JSX text are plain
+ * characters. Expressions are walked for nested JSX.
+ */
+export function jsxTextRuns(src) {
+  const out = [];
+  const isQuote = (c) => c === '\'' || c === '"' || c === '`';
+  // A quote straight after a letter is an apostrophe in prose (`<p>Don't</p>`).
+  const opensString = (j) => isQuote(src[j]) && !/[\p{L}\p{N}]/u.test(src[j - 1] ?? '');
+  const skipString = (j) => {
+    const q = src[j];
+    for (j += 1; j < src.length && src[j] !== q; j += 1) {
+      if (src[j] === '\\') j += 1;
+      else if (q === '`' && src[j] === '$' && src[j + 1] === '{') j = skipBraces(j + 1) - 1;
+      else if (q !== '`' && src[j] === '\n') return j;
+    }
+    return j + 1;
+  };
+  // src[j] === '{'; the index after its matching '}'.
+  function skipBraces(j) {
+    let depth = 0;
+    for (; j < src.length; j += 1) {
+      const c = src[j];
+      if (c === '{') depth += 1;
+      else if (c === '}') { depth -= 1; if (depth === 0) return j + 1; }
+      else if (opensString(j)) j = skipString(j) - 1;
+    }
+    return j;
+  }
+  // A tag at src[i] === '<': {end, name, closing, selfClosing}, or null.
+  const parseTag = (i) => {
+    let j = i + 1;
+    const closing = src[j] === '/';
+    if (closing) j += 1;
+    const name = /^[A-Za-z][\w.:-]*/.exec(src.slice(j, j + 80))?.[0] ?? '';
+    if (!name && src[j] !== '>') return null;
+    for (j += name.length; j < src.length; j += 1) {
+      const c = src[j];
+      if (c === '>') return { end: j + 1, name, closing, selfClosing: src[j - 1] === '/' };
+      if (c === '{') j = skipBraces(j) - 1;
+      else if (c === '"' || c === '\'') j = skipString(j) - 1;
+      else if (c === '<') return null;
+    }
+    return null;
+  };
+  const canOpenJsx = (i) => {
+    let k = i - 1;
+    while (k >= 0 && /\s/.test(src[k])) k -= 1;
+    if (k < 0) return true;
+    if (/[\w$]/.test(src[k])) {
+      let w = k;
+      while (w > 0 && /[\w$]/.test(src[w - 1])) w -= 1;
+      return JSX_AFTER_WORD.has(src.slice(w, k + 1));
+    }
+    return !/[)\]]/.test(src[k]);
+  };
+  // One element from its opening tag; returns the index after it.
+  const element = (i) => {
+    let depth = 0;
+    let text = '';
+    const flush = () => {
+      const t = text.replace(/\s+/g, ' ').trim();
+      if (/\p{L}/u.test(t)) out.push(t);
+      text = '';
+    };
+    while (i < src.length) {
+      const c = src[i];
+      if (c === '<') {
+        const tag = parseTag(i);
+        if (!tag) { text += c; i += 1; continue; }
+        if (!INLINE_TAGS.has(tag.name)) flush();
+        if (tag.closing) depth -= 1;
+        else if (!tag.selfClosing) depth += 1;
+        i = tag.end;
+        if (depth <= 0) { flush(); return i; }
+        continue;
       }
+      if (c === '{') {
+        const end = skipBraces(i);
+        walk(i + 1, end - 1);
+        text += '{}';
+        i = end;
+        continue;
+      }
+      // JSX text never holds a bare } or >: this was not JSX after all.
+      if (c === '}' || c === '>') return i;
+      text += c;
+      i += 1;
+    }
+    flush();
+    return i;
+  };
+  function walk(from, to) {
+    let i = from;
+    while (i < to) {
+      if (src[i] === '<' && /[A-Za-z>]/.test(src[i + 1] ?? '') && canOpenJsx(i)) {
+        const tag = parseTag(i);
+        if (tag && !tag.closing) {
+          i = tag.selfClosing ? tag.end : element(i);
+          continue;
+        }
+      }
+      if (opensString(i)) { i = skipString(i); continue; }
+      i += 1;
     }
   }
-  return { strings, code, skeleton };
+  walk(0, src.length);
+  return out;
 }
 
 const TITLE_PROP = /(?:^|[\s,{(])(?:title|heading|headline)\s*[:=]\s*\{?\s*\u0000(\d+)\u0000/g;
@@ -425,8 +601,11 @@ export function scan(config, root) {
       try { flat = flattenCatalogue(JSON.parse(readFileSync(file, 'utf8'))); }
       catch (err) { throw new UsageError(`${rel}: not valid JSON (${err.message})`); }
       const locale = catalogueLocale(rel, known);
+      // Its own locale, and English: an untranslated value is left in English
+      // (a de.json holding "Failed to retrieve balance. Please try again.").
+      const locales = locale ? [...new Set([locale, 'en'])].filter((l) => l in phrases) : null;
       for (const [key, value] of Object.entries(flat)) {
-        const hit = matchGeneric(phrases, value, locale ? [locale] : null);
+        const hit = matchGeneric(phrases, value, locales);
         if (hit) add(`${rel}#${key} generic`, `${JSON.stringify(value)} — ${hit.mode} "${hit.phrase}" (${hit.locale})`);
       }
       for (const { titleKey, bodyKey } of catalogueTitlePairs(flat)) {
@@ -436,15 +615,21 @@ export function scan(config, root) {
   }
 
   const exts = config.extensions ?? DEFAULT_EXTS;
-  const counters = Object.entries(config.counters ?? {}).map(([name, re]) => {
-    try { return [name, new RegExp(re, 'g')]; }
+  // A counter is a pattern, or { pattern, scope }. scope `source` (the
+  // default) matches the source without comments but WITH its string
+  // literals, so `t('common_error_generic_message')` is countable; scope
+  // `code` matches with every literal emptied.
+  const counters = Object.entries(config.counters ?? {}).map(([name, spec]) => {
+    const { pattern, scope = 'source' } = typeof spec === 'string' ? { pattern: spec } : (spec ?? {});
+    if (!['source', 'code'].includes(scope)) throw new UsageError(`counter "${name}": scope must be "source" or "code", got ${JSON.stringify(scope)}`);
+    try { return [name, new RegExp(pattern, 'g'), scope]; }
     catch (err) { throw new UsageError(`counter "${name}": ${err.message}`); }
   });
   for (const entry of config.sources ?? []) {
     const files = walk(resolve(root, entry), (p) => exts.includes(extname(p)) && !isTestFile(p), skip);
     for (const file of files) {
       const rel = posix(file);
-      const { strings, code, skeleton } = extractLiterals(readFileSync(file, 'utf8'), extname(file));
+      const { strings, code, source, skeleton } = extractLiterals(readFileSync(file, 'utf8'), extname(file));
       for (const s of strings) {
         if (s.logged || !readsAsProse(s.value)) continue;
         const hit = matchGeneric(phrases, s.value, null);
@@ -456,8 +641,8 @@ export function scan(config, root) {
       for (const { title, body } of sourceTitlePairs(skeleton, strings)) {
         add(`${rel}: ${JSON.stringify(normalize(title))} title-repeats`, `${JSON.stringify(title)} / ${JSON.stringify(body)}`);
       }
-      for (const [name, re] of counters) {
-        const n = [...code.matchAll(re)].length;
+      for (const [name, re, scope] of counters) {
+        const n = [...(scope === 'code' ? code : source).matchAll(re)].length;
         if (n) {
           const id = `${rel} counter:${name}`;
           findings.set(id, { count: n, detail: `${n} × /${re.source}/` });
@@ -489,6 +674,29 @@ export function compare(findings, baseline, allow = {}) {
   return { over, under, staleAllow, allowed };
 }
 
+/**
+ * The baseline only goes down (DONE-6): entries this baseline holds above the
+ * merge base's, or that the merge base did not hold at all. Run in CI with
+ * --base, so a hand-added entry fails instead of relying on review.
+ */
+export function baselineRaised(base, head) {
+  return Object.entries(head)
+    .filter(([id, n]) => n > (base[id] ?? 0))
+    .map(([id, n]) => ({ id, count: n, base: base[id] ?? 0 }));
+}
+
+/**
+ * `allow` entries added since the merge base without an approval. A new
+ * exception is `{ "reason": "…", "approved": "<who>, <date>" }`; entries the
+ * merge base already held may stay plain reason strings.
+ */
+export function allowAddedWithoutApproval(baseAllow, allow) {
+  const approved = (v) => v && typeof v === 'object'
+    && typeof v.reason === 'string' && v.reason.trim() !== ''
+    && typeof v.approved === 'string' && v.approved.trim() !== '';
+  return Object.entries(allow).filter(([id, v]) => !(id in baseAllow) && !approved(v)).map(([id]) => id);
+}
+
 /** The lowered baseline: every entry at most its real count, zeros dropped. Never adds or raises. */
 export function lowerBaseline(findings, baseline) {
   const out = {};
@@ -507,7 +715,7 @@ function main(argv) {
     return i === -1 ? null : argv[i + 1];
   };
   const configPath = arg('--config');
-  if (!configPath) throw new UsageError('usage: check-error-copy.mjs --config <file> [--baseline <file>] [--update-baseline | --init-baseline] [--json]');
+  if (!configPath) throw new UsageError('usage: check-error-copy.mjs --config <file> [--baseline <file>] [--update-baseline | --init-baseline] [--base <git-ref>] [--json]');
   const config = JSON.parse(readFileSync(configPath, 'utf8'));
   const root = dirname(resolve(configPath));
   const baselinePath = resolve(arg('--baseline') ? process.cwd() : root, arg('--baseline') ?? config.baseline ?? '.error-copy-baseline.json');
@@ -530,7 +738,32 @@ function main(argv) {
     console.log(`baseline lowered to ${Object.keys(baseline).length} entr(ies): ${baselinePath}`);
   }
   const result = compare(findings, baseline, config.allow ?? {});
-  const failed = result.over.length + result.under.length + result.staleAllow.length;
+
+  // --base <ref>: the baseline and the allow list against the merge base.
+  const baseRef = arg('--base');
+  result.raised = [];
+  result.allowAdded = [];
+  const notes = [];
+  if (baseRef) {
+    const atBase = (abs) => {
+      const rel = relative(root, abs).split(sep).join('/');
+      const r = spawnSync('git', ['-C', root, 'show', `${baseRef}:./${rel}`], { encoding: 'utf8' });
+      if (r.error) throw new UsageError(`--base: cannot run git (${r.error.message})`);
+      if (r.status !== 0) {
+        if (/does not exist in|exists on disk, but not in/.test(r.stderr)) return null;
+        throw new UsageError(`--base ${baseRef}: ${r.stderr.trim()}`);
+      }
+      try { return JSON.parse(r.stdout); }
+      catch (err) { throw new UsageError(`--base ${baseRef}: ${rel} is not valid JSON there (${err.message})`); }
+    };
+    const baseBaseline = atBase(baselinePath);
+    if (baseBaseline) result.raised = baselineRaised(baseBaseline.findings ?? {}, baseline);
+    else notes.push(`no baseline at ${baseRef}: this is the first one, so there is nothing to ratchet against yet`);
+    const baseConfig = atBase(resolve(configPath));
+    result.allowAdded = allowAddedWithoutApproval(baseConfig?.allow ?? {}, config.allow ?? {});
+  }
+  const failed = result.over.length + result.under.length + result.staleAllow.length
+    + result.raised.length + result.allowAdded.length;
 
   if (argv.includes('--json')) {
     console.log(JSON.stringify({ ...result, findings: Object.fromEntries([...findings].map(([id, f]) => [id, f.count])) }, null, 2));
@@ -547,8 +780,16 @@ function main(argv) {
     console.error(`  ✗ DOWN ${u.id}: ${u.count} < baseline ${u.base} — fixed; run with --update-baseline to lower it`);
   }
   for (const id of result.staleAllow) console.error(`  ✗ STALE ALLOW ${id}: nothing matches it any more; remove it from the config`);
+  for (const r of result.raised) {
+    console.error(`  ✗ RAISED ${r.id}: ${r.count} in the baseline, ${r.base} at ${baseRef} — the baseline only goes down (DONE-6); fix the copy instead`);
+  }
+  for (const id of result.allowAdded) {
+    console.error(`  ✗ NEW ALLOW ${id}: added since ${baseRef} without approval; write it as { "reason": "…", "approved": "<who>, <date>" }`);
+  }
+  for (const n of notes) console.log(`  · ${n}`);
   if (failed) {
-    console.error(`\n✗ error copy: ${result.over.length} over the baseline, ${result.under.length} below it, ${result.staleAllow.length} stale allow(s).`
+    console.error(`\n✗ error copy: ${result.over.length} over the baseline, ${result.under.length} below it, ${result.staleAllow.length} stale allow(s)`
+      + (baseRef ? `, ${result.raised.length} raised since ${baseRef}, ${result.allowAdded.length} unapproved new allow(s).` : '.')
       + (result.over.length ? '\n  Say what failed, why, what to do and what was kept (ERROR-1); see ERRORS.md in babel-design-tokens.' : ''));
     return 1;
   }

@@ -119,7 +119,7 @@ file:line provenance).
 | Contract | Why |
 |---|---|
 | `error-codes.json` | 510 codes (507 the API declares on 2026-10-20, plus 3 it retired, kept until no client names them). Admin ships 322 translations, mobile 239. 13 have no translation in the API's own map. |
-| `failure-kinds.json` | The 23 kinds of failure a client tells apart before choosing words (`ERROR-3`), each with how to retry, what a failed write kept, and whether a reference shows. Admin, mobile and Rendee classified failures three different ways, and a null kind is what printed "Something went wrong" twice on Rendee's admin. |
+| `failure-kinds.json` | The 24 kinds of failure a client tells apart before choosing words (`ERROR-3`), each with how to retry, what a failed write kept, and whether a reference shows, plus `classify`: the ordered code and status rules that map an error envelope to a kind. Admin, mobile and Rendee classified failures three different ways, and a null kind is what printed "Something went wrong" twice on Rendee's admin. |
 | `error-envelope.json` | The error body (`ERROR-6`): fields, the gate on a 403, references, exposed headers, and the 12 `genericCodes` that must never overwrite a more specific sentence. |
 | `rules/generic-error-phrases.json` | The wording `ERROR-2` bans, in 11 locales, as whole messages, openings and phrases banned anywhere. Read by every app's error-copy guard. |
 | `field-error-codes.json` | The 16 `error.field.*` codes on a 400. **Neither client ships a single translation for any of them**, and mobile discards the `code` and `params` at parse, so it could not localize them today even if the keys existed. |
@@ -245,7 +245,9 @@ at nothing · a subset member outside `values` · a value both canonical and
 deprecated · a case-insensitive collision · an off-convention code · a
 non-integer or misnamed rule · a `min` above its `max` · a failure kind missing
 retry / savedOnWrite / showReference / toast, or ERRORS.md's kind table drifting
-from the contract · a generic code that is not in `error-codes.json` · a locale
+from the contract (names, retry, saved state, reference) · a `classify` rule that
+names no kind, infers an outage from an `_unavailable` suffix, misses a
+not-found code, or differs from ERRORS.md section 4 · a generic code that is not in `error-codes.json` · a locale
 with no phrase list, an empty list, a phrase that is not normalized or that the
 scanner does not catch · a rule ID in ERRORS.md that `principles/` does not define.
 
