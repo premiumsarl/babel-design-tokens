@@ -18,7 +18,8 @@
       "unit_": "api unit.schema.ts:210-273 · admin unit-info-form-schema.ts:196-385. Mobile declares NO maxLength on any unit field (unit_form_controller.dart), so adopting these is pure gain there.",
       "vendorName_InsuranceMaxLength": "api vendor.schema.ts:159 + vendor.schema.ts:28-29 · admin provider-form-schema.ts:342,353,377",
       "vendorLicense_Gst_Qst_NeqMaxLength": "admin provider-form-schema.ts:268,291,301,311 · mobile add_service_provider.dart:433,458,465,472. THE API DECLARES NO BOUND on any of these — another inverted-ownership case: the two clients agree with each other and the server is silent.",
-      "groupChatNameMaxLength": "api stream-chat.schema.ts:21 · admin messages/page.tsx:1616"
+      "groupChatNameMaxLength": "api stream-chat.schema.ts:21 · admin messages/page.tsx:1616",
+      "unitTagsMax": "api service/unit-tag-limits.ts (UNIT_TAGS_MAX; POST /unit/tags answers 409 error.unit.tag_limit_reached past it) · admin lib/unit-tags.ts (UNIT_TAGS_MAX) · mobile common/utils/unit_tag_rules.dart (unitTagsMax). Owner ruling 2026-10-28; removals are never capped, so a unit already past it keeps its tags."
     },
     "$conflicts": {
       "note": "Measured disagreements. NOT shipped as rules — each needs an owner decision, and each is a live defect today.",
@@ -62,6 +63,7 @@
     "vendorNeqNumberMaxLength": 20,
     "vendorInsurancePolicyNumberMaxLength": 100,
     "vendorInsuranceCoverageTypeMaxLength": 100,
-    "groupChatNameMaxLength": 80
+    "groupChatNameMaxLength": 80,
+    "unitTagsMax": 8
   }
 }

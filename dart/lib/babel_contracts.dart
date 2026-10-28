@@ -72,6 +72,7 @@ abstract final class BabelErrorCodes {
   static const String unitAlreadyExists = 'error.unit.already_exists';
   static const String unitInvalidStatus = 'error.unit.invalid_status';
   static const String unitQuotaExceedsTotal = 'error.unit.quota_exceeds_total';
+  static const String unitTagLimitReached = 'error.unit.tag_limit_reached';
   static const String paymentFailed = 'error.payment.failed';
   static const String paymentNotFound = 'error.payment.not_found';
   static const String paymentAlreadyProcessed = 'error.payment.already_processed';
@@ -585,6 +586,7 @@ abstract final class BabelErrorCodes {
     'error.unit.already_exists',
     'error.unit.invalid_status',
     'error.unit.quota_exceeds_total',
+    'error.unit.tag_limit_reached',
     'error.payment.failed',
     'error.payment.not_found',
     'error.payment.already_processed',
@@ -1518,6 +1520,7 @@ abstract final class BabelLimits {
   static const int vendorInsurancePolicyNumberMaxLength = 100;
   static const int vendorInsuranceCoverageTypeMaxLength = 100;
   static const int groupChatNameMaxLength = 80;
+  static const int unitTagsMax = 8;
 }
 
 /// Every kind of failure a client tells apart before choosing the words of

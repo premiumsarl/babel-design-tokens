@@ -10,7 +10,8 @@
       "measuredOn": "2026-10-20",
       "measuredAt": "babel-lambda-api origin/develop b950f1b6",
       "count": 507,
-      "previous": "215 codes, measured 2026-08-10"
+      "previous": "215 codes, measured 2026-08-10",
+      "addedSince": "UNIT_TAG_LIMIT_REACHED (babel-lambda-api #2161, merged 2026-10-28): 409 when POST /unit/tags would take a unit past 8 tags. Translated in the API (en, fr, es, zh)."
     },
     "drift": {
       "note": "The API owns this list outright; the drift is in how much of it each client can name. Counts are `api_error_*` i18n keys per client.",
@@ -102,6 +103,7 @@
     "UNIT_ALREADY_EXISTS": "error.unit.already_exists",
     "UNIT_INVALID_STATUS": "error.unit.invalid_status",
     "UNIT_QUOTA_EXCEEDS_TOTAL": "error.unit.quota_exceeds_total",
+    "UNIT_TAG_LIMIT_REACHED": "error.unit.tag_limit_reached",
     "PAYMENT_FAILED": "error.payment.failed",
     "PAYMENT_NOT_FOUND": "error.payment.not_found",
     "PAYMENT_ALREADY_PROCESSED": "error.payment.already_processed",
