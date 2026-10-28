@@ -5,6 +5,19 @@ package (`lib/`) come off the same `vX.Y.Z` tag. Entries name the CSS and
 Dart surface of each change. 0.3.0–0.7.0 were backfilled in 0.8.0 from the
 commit history; this file had stopped at 0.2.0.
 
+## 0.9.1
+- **`error.unit.tag_limit_reached`** (owner ruling 2026-10-28: at most 8
+  tags per unit). `POST /unit/tags` answers 409 with this code when the
+  addition would take a unit past the cap (babel-lambda-api #2161);
+  `details` carries `max`, `current` and `adding`. Removals are never
+  capped. New `ERROR_CODES.UNIT_TAG_LIMIT_REACHED` (npm) and
+  `BabelErrorCodes.unitTagLimitReached` (Dart); it classifies as
+  `conflict` through the 409 status fallback. 510 → 511 codes.
+- **`unitTagsMax: 8`** in `contracts/rules/limits.json` (npm
+  `LIMITS.unitTagsMax`; Dart `BabelLimits.unitTagsMax`). The API, the admin
+  panel and mobile each declare 8 today; this is the shared value to pin
+  them to.
+
 ## 0.9.0
 - **Errors that say what happened (owner ruling, 2026-10-20: "Nothing this
   generic is acceptable").** New `## Errors` section in

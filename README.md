@@ -118,7 +118,7 @@ file:line provenance).
 
 | Contract | Why |
 |---|---|
-| `error-codes.json` | 510 codes (507 the API declares on 2026-10-20, plus 3 it retired, kept until no client names them). Admin ships 322 translations, mobile 239. 13 have no translation in the API's own map. |
+| `error-codes.json` | 511 codes (507 the API declared on 2026-10-20, `error.unit.tag_limit_reached` added on 2026-10-28, plus 3 it retired, kept until no client names them). Admin ships 322 translations, mobile 239. 13 have no translation in the API's own map. |
 | `failure-kinds.json` | The 24 kinds of failure a client tells apart before choosing words (`ERROR-3`), each with how to retry, what a failed write kept, and whether a reference shows, plus `classify`: the ordered code and status rules that map an error envelope to a kind. Admin, mobile and Rendee classified failures three different ways, and a null kind is what printed "Something went wrong" twice on Rendee's admin. |
 | `error-envelope.json` | The error body (`ERROR-6`): fields, the gate on a 403, references, exposed headers, and the 12 `genericCodes` that must never overwrite a more specific sentence. |
 | `rules/generic-error-phrases.json` | The wording `ERROR-2` bans, in 11 locales, as whole messages, openings and phrases banned anywhere. Read by every app's error-copy guard. |

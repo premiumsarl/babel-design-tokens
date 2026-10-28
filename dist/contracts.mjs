@@ -65,6 +65,7 @@ export const ERROR_CODES = Object.freeze({
   'UNIT_ALREADY_EXISTS': 'error.unit.already_exists',
   'UNIT_INVALID_STATUS': 'error.unit.invalid_status',
   'UNIT_QUOTA_EXCEEDS_TOTAL': 'error.unit.quota_exceeds_total',
+  'UNIT_TAG_LIMIT_REACHED': 'error.unit.tag_limit_reached',
   'PAYMENT_FAILED': 'error.payment.failed',
   'PAYMENT_NOT_FOUND': 'error.payment.not_found',
   'PAYMENT_ALREADY_PROCESSED': 'error.payment.already_processed',
@@ -907,6 +908,7 @@ export const LIMITS = Object.freeze({
   vendorInsurancePolicyNumberMaxLength: 100,
   vendorInsuranceCoverageTypeMaxLength: 100,
   groupChatNameMaxLength: 80,
+  unitTagsMax: 8,
 });
 
 /**

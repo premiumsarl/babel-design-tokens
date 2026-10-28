@@ -56,6 +56,7 @@ export declare const ERROR_CODES: {
   readonly UNIT_ALREADY_EXISTS: 'error.unit.already_exists';
   readonly UNIT_INVALID_STATUS: 'error.unit.invalid_status';
   readonly UNIT_QUOTA_EXCEEDS_TOTAL: 'error.unit.quota_exceeds_total';
+  readonly UNIT_TAG_LIMIT_REACHED: 'error.unit.tag_limit_reached';
   readonly PAYMENT_FAILED: 'error.payment.failed';
   readonly PAYMENT_NOT_FOUND: 'error.payment.not_found';
   readonly PAYMENT_ALREADY_PROCESSED: 'error.payment.already_processed';
@@ -705,6 +706,7 @@ export declare const LIMITS: {
   readonly vendorInsurancePolicyNumberMaxLength: 100;
   readonly vendorInsuranceCoverageTypeMaxLength: 100;
   readonly groupChatNameMaxLength: 80;
+  readonly unitTagsMax: 8;
 };
 
 /** How a failure kind behaves. See contracts/failure-kinds.json $meta.attributes. */
